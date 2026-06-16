@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Club — Submit a Trade</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-brand">
+    <h1>Investment Club</h1>
+    <span class="divider">|</span>
+    <span>Trade Journal</span>
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html" class="active">Submit</a>
+    <a href="review.html">Review Desk</a>
+  </div>
+</nav>
+
+<main class="page">
+  <p class="section-eyebrow">Member Submission</p>
+  <h2 class="section-title">Submit a Trade</h2>
+  <p class="section-sub">Complete your homework below. Every field matters — a strong submission helps the committee make a fast, well-informed decision.</p>
+
+  <!-- Block 1: Identification -->
+  <div class="form-block">
+    <div class="form-block-title">Trade Identification</div>
+    <div class="field-grid cols-3">
+      <div class="field">
+        <label>Ticker Symbol</label>
+        <input type="text" id="f-ticker" class="ticker-input" placeholder="AAPL" maxlength="8">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="f-member" placeholder="Club member name">
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 2: Thesis -->
+  <div class="form-block">
+    <div class="form-block-title">Investment Thesis</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Core Thesis</label>
+        <textarea id="f-thesis" rows="3" placeholder="A strong thesis is 2–3 sentences. Capture the investment opportunity concisely — what the market is missing and why this position wins."></textarea>
+        <p class="hint">2–3 sentences. What does the market not yet know or appreciate?</p>
+      </div>
+      <div class="field">
+        <label>Competitive Moat</label>
+        <textarea id="f-moat" rows="3" placeholder="What structural advantages protect this company? Brand, network effects, cost structure, switching costs, IP, regulatory position..."></textarea>
+      </div>
+      <div class="field">
+        <label>Why Now</label>
+        <textarea id="f-why-now" rows="3" placeholder="What's the catalyst or timing rationale? Earnings cycle, macro tailwind, management change, sector rotation, regulatory shift..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 3: Pros & Cons -->
+  <div class="form-block">
+    <div class="form-block-title">Bull &amp; Bear Case</div>
+    <div class="field-grid cols-2">
+      <div class="field">
+        <label>Pros — Bull Case</label>
+        <textarea id="f-pros" rows="6" placeholder="List the key arguments in favor. Be specific and cite data where possible.&#10;&#10;— Revenue growth accelerating&#10;— Margin expansion thesis&#10;— Undervalued vs. peers at X multiple"></textarea>
+      </div>
+      <div class="field">
+        <label>Cons — Bear Case &amp; Risks</label>
+        <textarea id="f-cons" rows="6" placeholder="What could go wrong? What assumptions need to hold?&#10;&#10;— Key risk 1&#10;— Key risk 2&#10;— What would invalidate the thesis"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block 4: Execution -->
+  <div class="form-block">
+    <div class="form-block-title">Trade Execution</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Trade Entry</label>
+        <textarea id="f-entry" rows="3" placeholder="Entry price or range, order type (limit / market), position sizing as % of portfolio, any trigger conditions or price levels to watch."></textarea>
+      </div>
+      <div class="field">
+        <label>Trade Management — Think Through Every Outcome</label>
+        <textarea id="f-management" rows="7" placeholder="Bull scenario: If price reaches $X, I will...&#10;Base scenario: If price trades between $X–$Y, I will...&#10;Bear / stop-loss: If price falls to $X, I will exit because...&#10;Time stop: If the thesis isn't proven by [date], I will...&#10;Position sizing changes: I will add / trim if..."></textarea>
+        <p class="hint">No scenario should be "hope it goes up." Think through the trade as if you already own it.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:16px; margin-top:8px;">
+    <button class="btn btn-primary" onclick="submitTrade()">Submit Trade for Review →</button>
+    <span id="submit-status" style="font-size:.82rem; color:var(--mist);"></span>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  // Set today as default date
+  document.getElementById('f-date').valueAsDate = new Date();
+
+  function submitTrade() {
+    const ticker  = (document.getElementById('f-ticker').value || '').trim().toUpperCase();
+    const date    = document.getElementById('f-date').value;
+    const member  = (document.getElementById('f-member').value || '').trim();
+    const thesis  = (document.getElementById('f-thesis').value || '').trim();
+    const moat    = (document.getElementById('f-moat').value || '').trim();
+    const whyNow  = (document.getElementById('f-why-now').value || '').trim();
+    const pros    = (document.getElementById('f-pros').value || '').trim();
+    const cons    = (document.getElementById('f-cons').value || '').trim();
+    const entry   = (document.getElementById('f-entry').value || '').trim();
+    const mgmt    = (document.getElementById('f-management').value || '').trim();
+
+    if (!ticker || !member || !thesis) {
+      showToast('Please fill in Ticker, Your Name, and Core Thesis at minimum.', true);
+      return;
+    }
+
+    const trade = { ticker, date, member, thesis, moat, whyNow, pros, cons, entry, management: mgmt };
+    saveTrade(trade);
+
+    // Clear form
+    ['f-ticker','f-member','f-thesis','f-moat','f-why-now','f-pros','f-cons','f-entry','f-management']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-date').valueAsDate = new Date();
+
+    showToast('✓ Trade submitted. Bob can review it on the Review Desk.');
+    document.getElementById('submit-status').textContent = `${ticker} submitted at ${new Date().toLocaleTimeString()}`;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Club — Review Desk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Password Gate ── -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="lock">🔐</div>
+    <h2>Review Desk</h2>
+    <p>Committee access only.<br>Enter the passphrase to continue.</p>
+    <input type="password" id="gate-input" placeholder="passphrase" onkeydown="if(event.key==='Enter') unlock()">
+    <br>
+    <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:4px;" onclick="unlock()">Enter</button>
+    <p class="gate-error" id="gate-error">Incorrect passphrase. Try again.</p>
+  </div>
+</div>
+
+<!-- ── Main App (hidden until unlocked) ── -->
+<div id="app" style="display:none;">
+
+  <nav class="topbar">
+    <div class="topbar-brand">
+      <h1>Investment Club</h1>
+      <span class="divider">|</span>
+      <span>Review Desk</span>
+    </div>
+    <div class="topbar-nav">
+      <a href="index.html">Submit</a>
+      <a href="review.html" class="active">Review Desk</a>
+    </div>
+  </nav>
+
+  <main class="page">
+
+    <!-- Dashboard header with stats -->
+    <div class="dash-header">
+      <div>
+        <p class="section-eyebrow">Committee View</p>
+        <h2 class="section-title">Trade Submissions</h2>
+      </div>
+      <div class="dash-stats">
+        <div class="stat">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-pending" style="color:var(--mist);">0</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-approved" style="color:var(--green2);">0</div>
+          <div class="stat-label">Approved</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-watch" style="color:var(--amber2);">0</div>
+          <div class="stat-label">Watch</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" id="stat-pass" style="color:var(--red2);">0</div>
+          <div class="stat-label">Pass</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Synthesis Panel -->
+    <div class="synthesis-panel">
+      <div class="synthesis-header">
+        <div>
+          <h3>✦ AI Synthesis</h3>
+          <p style="font-size:.78rem; color:var(--mist); margin-top:3px;">Claude reads all submissions and surfaces patterns, consensus, and outliers.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="synth-btn" onclick="runSynthesis()">Synthesize Submissions</button>
+      </div>
+      <div id="synthesis-output"></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <button class="pill active" onclick="setFilter('all', this)">All</button>
+      <button class="pill" onclick="setFilter('pending', this)">Pending</button>
+      <button class="pill" onclick="setFilter('approved', this)">Approved</button>
+      <button class="pill" onclick="setFilter('watch', this)">Watch</button>
+      <button class="pill" onclick="setFilter('pass', this)">Pass</button>
+    </div>
+
+    <!-- Cards -->
+    <div id="cards"></div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  const PASS = 'clubhouse';
+  let currentFilter = 'all';
+  let trades = [];
+
+  /* ── Gate ── */
+  function unlock() {
+    const val = document.getElementById('gate-input').value;
+    if (val === PASS) {
+      sessionStorage.setItem('ic_auth', '1');
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      init();
+    } else {
+      document.getElementById('gate-error').style.display = 'block';
+      document.getElementById('gate-input').value = '';
+    }
+  }
+
+  // Check if already authenticated
+  if (sessionStorage.getItem('ic_auth') === '1') {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  /* ── Init ── */
+  function init() {
+    trades = loadTrades();
+    renderAll();
+  }
+  if (sessionStorage.getItem('ic_auth') === '1') init();
+
+  /* ── Filter ── */
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    renderCards();
+  }
+
+  /* ── Stats ── */
+  function renderStats() {
+    const counts = { pending:0, approved:0, watch:0, pass:0 };
+    trades.forEach(t => { if (counts[t.status] !== undefined) counts[t.status]++; });
+    document.getElementById('stat-total').textContent   = trades.length;
+    document.getElementById('stat-pending').textContent  = counts.pending;
+    document.getElementById('stat-approved').textContent = counts.approved;
+    document.getElementById('stat-watch').textContent    = counts.watch;
+    document.getElementById('stat-pass').textContent     = counts.pass;
+  }
+
+  function renderAll() { renderStats(); renderCards(); }
+
+  /* ── Cards ── */
+  function renderCards() {
+    const filtered = currentFilter === 'all'
+      ? trades
+      : trades.filter(t => t.status === currentFilter);
+
+    const container = document.getElementById('cards');
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="empty">
+        <div class="icon">📋</div>
+        <p>${trades.length === 0
+          ? 'No submissions yet.<br>Members submit trades on the main page.'
+          : 'No trades match this filter.'}</p>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map((t, i) => cardHTML(t, i)).join('');
+  }
+
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+  }
+
+  function badgeHTML(status) {
+    const labels = { pending:'● Pending', approved:'✓ Approved', watch:'◑ Watch', pass:'✕ Pass' };
+    return `<span class="badge badge-${status}">${labels[status]||status}</span>`;
+  }
+
+  function cardHTML(t, i) {
+    const isOpen = t.open || false;
+    return `<div class="trade-card ${isOpen?'open':''}" id="card-${t.id}">
+      <div class="card-head" onclick="toggleCard('${t.id}')">
+        <div class="card-head-left">
+          <span class="card-ticker">${esc(t.ticker)}</span>
+          <div class="card-meta">
+            <span>📅 ${t.date}</span>
+            <span>👤 ${esc(t.member)}</span>
+          </div>
+        </div>
+        <div class="card-head-right">
+          ${badgeHTML(t.status)}
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        ${t.thesis ? `<div class="thesis-pull">${esc(t.thesis)}</div>` : ''}
+
+        ${(t.moat || t.whyNow) ? `<div class="detail-grid">
+          ${t.moat   ? `<div class="detail-item"><h4>Competitive Moat</h4><p>${esc(t.moat)}</p></div>`   : ''}
+          ${t.whyNow ? `<div class="detail-item"><h4>Why Now</h4><p>${esc(t.whyNow)}</p></div>` : ''}
+        </div>` : ''}
+
+        ${(t.pros || t.cons) ? `<div class="pros-cons-grid">
+          ${t.pros ? `<div class="pros-box"><h4>✓ Bull Case</h4><p>${esc(t.pros)}</p></div>` : ''}
+          ${t.cons ? `<div class="cons-box"><h4>✕ Bear Case / Risks</h4><p>${esc(t.cons)}</p></div>` : ''}
+        </div>` : ''}
+
+        ${t.entry      ? `<div class="full-detail"><h4>Trade Entry</h4><p>${esc(t.entry)}</p></div>` : ''}
+        ${t.management ? `<div class="full-detail"><h4>Trade Management</h4><p>${esc(t.management)}</p></div>` : ''}
+      </div>
+
+      <div class="decision-bar">
+        <span class="decision-label">Decision:</span>
+        <button class="dec-btn dec-btn-approve ${t.status==='approved'?'active':''}"
+          onclick="setStatus('${t.id}','approved')">Approve</button>
+        <button class="dec-btn dec-btn-watch ${t.status==='watch'?'active':''}"
+          onclick="setStatus('${t.id}','watch')">Watch</button>
+        <button class="dec-btn dec-btn-pass ${t.status==='pass'?'active':''}"
+          onclick="setStatus('${t.id}','pass')">Pass</button>
+        <input class="notes-input" type="text"
+          placeholder="Committee notes…"
+          value="${esc(t.notes||'')}"
+          oninput="saveNote('${t.id}', this.value)"
+          onclick="event.stopPropagation()">
+      </div>
+    </div>`;
+  }
+
+  function toggleCard(id) {
+    const t = trades.find(t => t.id === id);
+    if (t) { t.open = !t.open; renderCards(); }
+  }
+
+  function setStatus(id, status) {
+    const t = trades.find(t => String(t.id) === String(id));
+    if (!t) return;
+    t.status = t.status === status ? 'pending' : status;
+    updateTrade(t);
+    renderAll();
+    showToast(`${t.ticker} marked as ${t.status}.`);
+  }
+
+  function saveNote(id, val) {
+    const t = trades.find(t => String(t.id) === String(id));
+    if (t) { t.notes = val; updateTrade(t); }
+  }
+
+  /* ── AI Synthesis ── */
+  async function runSynthesis() {
+    if (trades.length === 0) {
+      showToast('No submissions to synthesize yet.', true);
+      return;
+    }
+
+    const btn = document.getElementById('synth-btn');
+    const out  = document.getElementById('synthesis-output');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+    out.className = 'visible';
+    out.innerHTML = '<span class="thinking-dots">Claude is reading the submissions…</span>';
+
+    const summary = trades.map(t => `
+TICKER: ${t.ticker}
+MEMBER: ${t.member}
+DATE: ${t.date}
+THESIS: ${t.thesis}
+MOAT: ${t.moat}
+WHY NOW: ${t.whyNow}
+PROS: ${t.pros}
+CONS: ${t.cons}
+ENTRY: ${t.entry}
+MANAGEMENT: ${t.management}
+STATUS: ${t.status}
+    `.trim()).join('\n\n---\n\n');
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          system: `You are a senior investment analyst helping a club chairman review trade submissions from club members. 
+Be concise, direct, and insightful. Identify patterns, consensus, outliers, and the strongest ideas. 
+Use plain language — no jargon for its own sake. Format your response with clear sections using simple headers.`,
+          messages: [{
+            role: 'user',
+            content: `Here are this cycle's trade submissions from club members:\n\n${summary}\n\nPlease synthesize these submissions. Cover:\n1. Overall themes or sectors the club is converging on\n2. The strongest thesis or two and why\n3. Any shared risks or concerns across multiple submissions\n4. Notable outliers or contrarian ideas worth discussing\n5. Your quick take on which deserve the most committee time`
+          }]
+        })
+      });
+
+      const data = await response.json();
+      const text = (data.content || []).map(b => b.text || '').join('');
+      out.textContent = text || 'No response returned.';
+    } catch (err) {
+      out.innerHTML = `<span style="color:var(--red2);">Error reaching Claude API. Check your connection or API key in app.js.</span>`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Re-synthesize';
+  }
+</script>
+</body>
+</html>
