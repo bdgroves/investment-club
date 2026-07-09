@@ -181,6 +181,47 @@
     return `<span class="badge badge-${status}">${labels[status]||status}</span>`;
   }
 
+  // Format a money value: show $ prefix if it's a bare number
+  function money(v) {
+    if (v === undefined || v === null || v === '') return '';
+    const s = String(v).trim();
+    return /^[0-9.]+$/.test(s) ? '$' + s : esc(s);
+  }
+
+  // Price levels strip (share value / entry / exit / 52-wk range)
+  function priceRowHTML(t) {
+    const cells = [];
+    if (t.shareValue)  cells.push(['Today', money(t.shareValue)]);
+    if (t.entryTarget) cells.push(['Entry Target', money(t.entryTarget)]);
+    if (t.exit)        cells.push(['Exit', money(t.exit)]);
+    if (t.high52 || t.low52) {
+      const range = (t.low52 ? money(t.low52) : '—') + ' – ' + (t.high52 ? money(t.high52) : '—');
+      cells.push(['52-Wk Range', range]);
+    }
+    if (cells.length === 0) return '';
+    return `<div class="fund-grid" style="grid-template-columns:repeat(${cells.length},1fr); margin-top:16px;">
+      ${cells.map(([k,v]) => `<div class="fund-cell"><span class="fk">${k}</span><span class="fv" style="color:var(--amber2);">${v}</span></div>`).join('')}
+    </div>`;
+  }
+
+  // Fundamentals grid
+  function fundGridHTML(t) {
+    const items = [
+      ['Market Cap',   t.marketCap],
+      ['Style',        t.growthIncome],
+      ['Beta',         t.beta],
+      ['P/E',          t.peRatio],
+      ['P/Rev/Share',  t.priceRevShare],
+      ['EPS',          t.eps ? money(t.eps) : ''],
+      ['Div/Share',    t.dividend ? money(t.dividend) : ''],
+      ['Div Freq',     t.dividendFreq]
+    ].filter(([k,v]) => v !== undefined && v !== null && String(v).trim() !== '');
+    if (items.length === 0) return '';
+    return `<div class="fund-grid">
+      ${items.map(([k,v]) => `<div class="fund-cell"><span class="fk">${k}</span><span class="fv">${esc(String(v))}</span></div>`).join('')}
+    </div>`;
+  }
+
   function cardHTML(t, i) {
     const isOpen = t.open || false;
     return `<div class="trade-card ${isOpen?'open':''}" id="card-${t.id}">
@@ -188,8 +229,10 @@
         <div class="card-head-left">
           <span class="card-ticker">${esc(t.ticker)}</span>
           <div class="card-meta">
+            ${t.stock ? `<span style="color:var(--fog);">${esc(t.stock)}</span>` : ''}
             <span>📅 ${t.date}</span>
             <span>👤 ${esc(t.member)}</span>
+            ${t.sector ? `<span style="color:var(--mist);">${esc(t.sector)}</span>` : ''}
           </div>
         </div>
         <div class="card-head-right">
@@ -199,6 +242,9 @@
       </div>
 
       <div class="card-body">
+        ${priceRowHTML(t)}
+        ${fundGridHTML(t)}
+
         ${t.thesis ? `<div class="thesis-pull">${esc(t.thesis)}</div>` : ''}
 
         ${(t.moat || t.whyNow) ? `<div class="detail-grid">
@@ -207,11 +253,10 @@
         </div>` : ''}
 
         ${(t.pros || t.cons) ? `<div class="pros-cons-grid">
-          ${t.pros ? `<div class="pros-box"><h4>✓ Bull Case</h4><p>${esc(t.pros)}</p></div>` : ''}
-          ${t.cons ? `<div class="cons-box"><h4>✕ Bear Case / Risks</h4><p>${esc(t.cons)}</p></div>` : ''}
+          ${t.pros ? `<div class="pros-box"><h4>✓ Pros</h4><p>${esc(t.pros)}</p></div>` : ''}
+          ${t.cons ? `<div class="cons-box"><h4>✕ Cons / Risks</h4><p>${esc(t.cons)}</p></div>` : ''}
         </div>` : ''}
 
-        ${t.entry      ? `<div class="full-detail"><h4>Trade Entry</h4><p>${esc(t.entry)}</p></div>` : ''}
         ${t.management ? `<div class="full-detail"><h4>Trade Management</h4><p>${esc(t.management)}</p></div>` : ''}
       </div>
 
@@ -266,15 +311,17 @@
     out.innerHTML = '<span class="thinking-dots">Claude is reading the submissions…</span>';
 
     const summary = trades.map(t => `
-TICKER: ${t.ticker}
+TICKER: ${t.ticker}${t.stock ? ' ('+t.stock+')' : ''}
 MEMBER: ${t.member}
 DATE: ${t.date}
+SECTOR: ${t.sector||'—'} | MARKET CAP: ${t.marketCap||'—'} | STYLE: ${t.growthIncome||'—'}
+PRICE TODAY: ${t.shareValue||'—'} | ENTRY TARGET: ${t.entryTarget||'—'} | EXIT: ${t.exit||'—'} | 52WK: ${t.low52||'—'}–${t.high52||'—'}
+VALUATION: Beta ${t.beta||'—'}, P/E ${t.peRatio||'—'}, P/Rev ${t.priceRevShare||'—'}, EPS ${t.eps||'—'}, Div ${t.dividend||'—'} (${t.dividendFreq||'—'})
 THESIS: ${t.thesis}
 MOAT: ${t.moat}
 WHY NOW: ${t.whyNow}
 PROS: ${t.pros}
 CONS: ${t.cons}
-ENTRY: ${t.entry}
 MANAGEMENT: ${t.management}
 STATUS: ${t.status}
     `.trim()).join('\n\n---\n\n');

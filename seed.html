@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Club — Load Starter Trades</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-brand">
+    <h1>Investment Club</h1>
+    <span class="divider">|</span>
+    <span>Starter Data Loader</span>
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html">Submit</a>
+    <a href="review.html">Review Desk</a>
+  </div>
+</nav>
+
+<main class="page">
+  <p class="section-eyebrow">Setup Utility</p>
+  <h2 class="section-title">Load the Club's First Trades</h2>
+  <p class="section-sub">This drops three starter submissions into the review desk, drafted from the July 8 meeting: an alt-chip diversification play, an earth-based "picks &amp; shovels" name, and the space-based data-center moonshot. Members can claim, edit, or delete any of them — they're a starting point, not gospel.</p>
+
+  <div class="form-block">
+    <div class="form-block-title">What Gets Loaded</div>
+    <div style="font-size:.9rem; line-height:1.7; color:var(--fog);">
+      <div style="margin-bottom:10px;"><span style="font-family:'Space Mono',monospace; color:var(--amber2); font-weight:700;">AMD</span> &nbsp;— Alt-chip hedge to Nvidia concentration <span style="color:var(--mist);">(Technology · Large · Growth)</span></div>
+      <div style="margin-bottom:10px;"><span style="font-family:'Space Mono',monospace; color:var(--amber2); font-weight:700;">VRT</span> &nbsp;— Vertiv, data-center cooling &amp; power (picks &amp; shovels) <span style="color:var(--mist);">(Industrials · Large · Growth)</span></div>
+      <div><span style="font-family:'Space Mono',monospace; color:var(--amber2); font-weight:700;">SPCX</span> &nbsp;— SpaceX, space-based data centers (speculative) <span style="color:var(--mist);">(Technology · Large · Growth)</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+    <button class="btn btn-primary" onclick="loadStarter()">Load Starter Trades →</button>
+    <button class="btn btn-ghost" onclick="clearAll()">Clear All Data</button>
+    <a class="btn btn-ghost" href="review.html">Go to Review Desk</a>
+  </div>
+  <p style="font-size:.8rem; color:var(--mist); margin-top:16px;">Note: in prototype mode this saves to your browser only. Once the Google Sheet backend is wired, re-enter these through the form (or add them as sheet rows) so every member sees them.</p>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  const STARTER = [
+    {
+      id: "seed-amd",
+      date: "2026-07-08",
+      stock: "Advanced Micro Devices",
+      ticker: "AMD",
+      exchange: "NASDAQ",
+      member: "Club starter — reassign",
+      shareValue: "", entryTarget: "", exit: "", high52: "", low52: "",
+      sector: "Technology", marketCap: "Large", growthIncome: "Growth",
+      beta: "", peRatio: "", priceRevShare: "", eps: "", dividend: "", dividendFreq: "None",
+      thesis: "AMD is the most credible near-term hedge against the club's Nvidia concentration. As hyperscalers push to dual-source AI accelerators to escape Nvidia's pricing power, AMD's MI-series GPUs plus its ROCm software stack are the only at-scale alternative — giving it a tailwind that doesn't depend on beating Nvidia, only on customers wanting a second supplier.",
+      moat: "Strong x86 CPU franchise (data-center share gains vs Intel), chiplet packaging lead, and deep hyperscaler relationships. The honest gap: its software moat is far weaker than Nvidia's CUDA, which is the whole ballgame in accelerators.",
+      whyNow: "Hyperscaler dual-sourcing is accelerating — every major cloud wants an alternative to Nvidia on price and supply. Next-gen MI accelerators ramping into a market with more demand than Nvidia can serve alone.",
+      pros: "— Second-source demand is real and funded\n— Ongoing x86 server share gains fund the wait\n— Cheaper valuation than NVDA\n— Optionality on AI accelerator ramp",
+      cons: "— CUDA lock-in is the core risk; ROCm still trails\n— Nvidia's release cadence is brutal\n— Software/execution risk on the accelerator side\n— Could stay a perennial #2",
+      management: "Bull: a major hyperscaler names MI as a primary second source → add to the position. Base: steady x86 share gains carry it while the accelerator story develops → hold. Bear: ROCm fails to close the gap and the MI ramp slips → trim/exit. Time stop: reassess after the next two earnings for accelerator-revenue traction.",
+      status: "pending",
+      notes: "From 7/8 meeting: the 'diversify away from NVDA' idea. Cleanest liquid alt-chip name.",
+      open: false
+    },
+    {
+      id: "seed-vrt",
+      date: "2026-07-08",
+      stock: "Vertiv Holdings",
+      ticker: "VRT",
+      exchange: "NYSE",
+      member: "Club starter — reassign",
+      shareValue: "", entryTarget: "", exit: "", high52: "", low52: "",
+      sector: "Industrials", marketCap: "Large", growthIncome: "Growth",
+      beta: "", peRatio: "", priceRevShare: "", eps: "", dividend: "", dividendFreq: "Quarterly",
+      thesis: "Vertiv is a direct pick-and-shovel on the AI build-out's thermal and power layer. As rack densities blow past 100kW and liquid cooling becomes mandatory for >1kW chips, Vertiv's cooling and power-distribution portfolio gets bought regardless of which chip or model wins — the classic 'sell shovels in a gold rush' position from the BofA report.",
+      moat: "Large installed base with sticky service relationships, a full-stack thermal + power portfolio, and hard-to-displace incumbency inside hyperscale facilities.",
+      whyNow: "The liquid-cooling transition is inflecting now as Blackwell/Rubin-class TDPs exceed what air cooling can handle. Order backlog and visibility are strong.",
+      pros: "— Direct AI-capex beneficiary\n— Liquid-cooling secular ramp\n— Recurring service revenue\n— Strong order backlog",
+      cons: "— Already ran hard on this exact narrative — crowded\n— Cyclical capex exposure if AI spend pauses\n— Valuation not cheap\n— Competition from Trane, Johnson Controls, Delta",
+      management: "Bull: liquid-cooling adoption beats estimates → hold and let it run. Base: backlog converts steadily → core hold. Bear: any hyperscaler capex pause hits orders → trim into strength beforehand. Time stop: watch cooling-segment order growth quarter over quarter; thesis breaks if backlog stalls.",
+      status: "pending",
+      notes: "The BofA 'picks & shovels' bucket — water/cooling pillar. Verify it isn't already priced in (that's the Why-Now test).",
+      open: false
+    },
+    {
+      id: "seed-spcx",
+      date: "2026-07-08",
+      stock: "SpaceX",
+      ticker: "SPCX",
+      exchange: "NASDAQ",
+      member: "Club starter — reassign",
+      shareValue: "153", entryTarget: "", exit: "", high52: "225", low52: "135",
+      sector: "Technology", marketCap: "Large", growthIncome: "Growth",
+      beta: "", peRatio: "", priceRevShare: "", eps: "-2.94", dividend: "", dividendFreq: "None",
+      thesis: "SpaceX is the only public pure-play on space-based data centers — and the whole thesis rests on one variable: Starship launch cost. If cost-to-orbit collapses, orbital compute sidesteps the exact bottlenecks (power, water, land, grid) that make the earth-based build-out so hard. This is a long-horizon, launch-economics bet wrapped inside a rocket + Starlink + xAI business.",
+      moat: "Reusable-launch dominance (SpaceX runs more launches than most countries), the Starlink installed base, and vertical integration across rockets, satellites, and now xAI compute. No competitor has all four pieces.",
+      whyNow: "Newly public (Nasdaq: SPCX, IPO'd June 12, 2026). SpaceX has filed with the FCC for up to ~1M data-center satellites and stated a goal of launching 100 GW of compute to orbit per year over time. Now investable for the first time.",
+      pros: "— Only liquid way to own the space-DC theme\n— Launch-cost leader = controls the critical path\n— Starlink recurring revenue funds the moonshot\n— Enormous optionality if orbital compute works",
+      cons: "— Currently unprofitable (EPS ~ -$2.94 TTM); prospectus warns profitability isn't assured\n— Trades on aspiration, not fundamentals; analysts split (Morningstar fair value < half the market cap; CFRA sell, $115)\n— Space-DC economics ~4x terrestrial today; independent base case sees parity only ~2040\n— Musk holds ~82% voting power; retail gets low-vote Class A\n— High volatility",
+      management: "Treat as venture-style optionality, not a core position — size tiny (e.g., a fraction of a normal position). Bull: Starship hits reliable low-cost cadence → the space-DC option gets real, add slowly. Base: hold a small stake for the launch + Starlink business; the space-DC piece is a free call option. Bear: Starship setbacks or a broad AI-multiple compression → this is where the volatility bites; predefine a max loss. Time stop: this is a 2030s thesis — judge on Starship cost/reliability milestones, not quarters.",
+      status: "pending",
+      notes: "Speculative / high-vol. Space-DC economics still ~4x terrestrial (SemiAnalysis, Jun 2026); <15% odds of viability at scale by 2029-31. Price ~$153 as of 7/9. This is a launch-cost bet — size accordingly.",
+      open: false
+    }
+  ];
+
+  function loadStarter() {
+    if (!confirm("This replaces any current submissions with the 3 starter trades. Continue?")) return;
+    try {
+      localStorage.setItem('ic_trades', JSON.stringify(STARTER));
+      showToast('✓ Loaded 3 starter trades. Open the Review Desk to see them.');
+    } catch (e) {
+      showToast('Could not write to storage.', true);
+    }
+  }
+
+  function clearAll() {
+    if (!confirm("Clear ALL submissions from this browser? This can't be undone.")) return;
+    localStorage.removeItem('ic_trades');
+    showToast('All data cleared.');
+  }
+</script>
+</body>
+</html>
