@@ -1,146 +1,140 @@
 /**
  * Investment Club — Google Apps Script Backend
- * =============================================
- * Deploy as a Web App from your Google account:
- *   Extensions → Apps Script → Deploy → New deployment
+ * ============================================
+ * Deploy from your Google account:
+ *   Extensions → Apps Script → paste this in → Deploy → New deployment
  *   Type: Web app | Execute as: Me | Who has access: Anyone
+ * Then copy the Web App URL (ends in /exec) into app.js → SHEET_URL
  *
- * After deploying, copy the Web App URL into app.js → SHEET_URL
- *
- * The script auto-creates a "Submissions" sheet with headers on first run.
+ * Auto-creates a "Submissions" sheet with headers on first run.
  */
 
 const SHEET_NAME = 'Submissions';
 
-const HEADERS = [
-  'ID', 'Timestamp', 'Date', 'Stock', 'Ticker', 'Exchange', 'Member',
-  'Share Value', 'Entry Target', 'Exit', '52wk High', '52wk Low',
-  'Sector', 'Market Cap', 'Growth/Income', 'Beta', 'P/E',
-  'Price/Rev per Share', 'EPS', 'Dividend', 'Dividend Freq',
-  'Thesis', 'Moat', 'Why Now', 'Pros', 'Cons',
-  'Management', 'Status', 'Notes'
+// Single source of truth: app field key  <->  sheet column header
+const FIELDS = [
+  { key: 'id',            header: 'ID' },
+  { key: 'timestamp',     header: 'Timestamp' },
+  { key: 'date',          header: 'Date' },
+  { key: 'stock',         header: 'Stock' },
+  { key: 'ticker',        header: 'Ticker' },
+  { key: 'exchange',      header: 'Exchange' },
+  { key: 'member',        header: 'Member' },
+  { key: 'shareValue',    header: 'Share Value' },
+  { key: 'entryTarget',   header: 'Entry Target' },
+  { key: 'exit',          header: 'Exit' },
+  { key: 'high52',        header: '52wk High' },
+  { key: 'low52',         header: '52wk Low' },
+  { key: 'sector',        header: 'Sector' },
+  { key: 'marketCap',     header: 'Market Cap' },
+  { key: 'growthIncome',  header: 'Growth/Income' },
+  { key: 'beta',          header: 'Beta' },
+  { key: 'peRatio',       header: 'P/E' },
+  { key: 'priceRevShare', header: 'Price/Rev per Share' },
+  { key: 'eps',           header: 'EPS' },
+  { key: 'dividend',      header: 'Dividend' },
+  { key: 'dividendFreq',  header: 'Dividend Freq' },
+  { key: 'thesis',        header: 'Thesis' },
+  { key: 'moat',          header: 'Moat' },
+  { key: 'whyNow',        header: 'Why Now' },
+  { key: 'pros',          header: 'Pros' },
+  { key: 'cons',          header: 'Cons' },
+  { key: 'management',    header: 'Management' },
+  { key: 'status',        header: 'Status' },
+  { key: 'notes',         header: 'Notes' }
 ];
 
-/* ── GET: fetch all submissions for the review dashboard ── */
+const HEADERS = FIELDS.map(function (f) { return f.header; });
+
+/* ---------- GET: return all submissions (JSONP-aware) ---------- */
 function doGet(e) {
   const sheet = getSheet();
-  const rows  = sheet.getDataRange().getValues();
-
-  if (rows.length <= 1) {
-    return jsonResponse({ trades: [] });
+  const rows = sheet.getDataRange().getValues();
+  let trades = [];
+  if (rows.length > 1) {
+    trades = rows.slice(1).map(function (row) {
+      const obj = {};
+      FIELDS.forEach(function (f, i) { obj[f.key] = row[i]; });
+      obj.open = false;
+      return obj;
+    });
   }
-
-  const headers = rows[0];
-  const trades  = rows.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => obj[h.toLowerCase().replace(/ /g,'_')] = row[i]);
-    return obj;
-  });
-
-  return jsonResponse({ trades });
+  return reply({ trades: trades }, e);
 }
 
-/* ── POST: handle submit and decision actions ── */
+/* ---------- POST: submit a trade, or record a decision ---------- */
 function doPost(e) {
   try {
-    const body   = JSON.parse(e.postData.contents);
-    const action = body.action;
-
-    if (action === 'submit') {
+    const body = JSON.parse(e.postData.contents);
+    if (body.action === 'submit') {
       appendTrade(body.trade);
-      return jsonResponse({ ok: true });
+      return reply({ ok: true }, e);
     }
-
-    if (action === 'decision') {
+    if (body.action === 'decision') {
       updateDecision(body.id, body.status, body.notes);
-      return jsonResponse({ ok: true });
+      return reply({ ok: true }, e);
     }
-
-    return jsonResponse({ error: 'Unknown action' });
-  } catch(err) {
-    return jsonResponse({ error: err.message });
+    return reply({ error: 'Unknown action' }, e);
+  } catch (err) {
+    return reply({ error: String(err) }, e);
   }
 }
 
-/* ── Append a new trade row ── */
+/* ---------- helpers ---------- */
 function appendTrade(t) {
   const sheet = getSheet();
-  const now   = new Date().toISOString();
-  sheet.appendRow([
-    t.id || now,
-    now,
-    t.date          || '',
-    t.stock         || '',
-    (t.ticker || '').toUpperCase(),
-    t.exchange      || '',
-    t.member        || '',
-    t.shareValue    || '',
-    t.entryTarget   || '',
-    t.exit          || '',
-    t.high52        || '',
-    t.low52         || '',
-    t.sector        || '',
-    t.marketCap     || '',
-    t.growthIncome  || '',
-    t.beta          || '',
-    t.peRatio       || '',
-    t.priceRevShare || '',
-    t.eps           || '',
-    t.dividend      || '',
-    t.dividendFreq  || '',
-    t.thesis        || '',
-    t.moat          || '',
-    t.whyNow        || '',
-    t.pros          || '',
-    t.cons          || '',
-    t.management    || '',
-    'pending',
-    ''
-  ]);
+  const now = new Date().toISOString();
+  const row = FIELDS.map(function (f) {
+    if (f.key === 'id')        return t.id || now;
+    if (f.key === 'timestamp') return now;
+    if (f.key === 'ticker')    return String(t.ticker || '').toUpperCase();
+    if (f.key === 'status')    return t.status || 'pending';
+    if (f.key === 'notes')     return t.notes || '';
+    return t[f.key] || '';
+  });
+  sheet.appendRow(row);
 }
 
-/* ── Update status and notes for an existing row ── */
 function updateDecision(id, status, notes) {
-  const sheet  = getSheet();
-  const data   = sheet.getDataRange().getValues();
-  const idCol  = 0;   // Column A = ID
-  const statCol = HEADERS.indexOf('Status');
-  const noteCol = HEADERS.indexOf('Notes');
-
+  const sheet = getSheet();
+  const data = sheet.getDataRange().getValues();
+  const statusCol = HEADERS.indexOf('Status') + 1;
+  const notesCol  = HEADERS.indexOf('Notes') + 1;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(id)) {
-      sheet.getRange(i + 1, statCol + 1).setValue(status);
-      sheet.getRange(i + 1, noteCol + 1).setValue(notes || '');
+    if (String(data[i][0]) === String(id)) {   // column A = ID
+      sheet.getRange(i + 1, statusCol).setValue(status);
+      sheet.getRange(i + 1, notesCol).setValue(notes || '');
       return;
     }
   }
 }
 
-/* ── Get or create the sheet ── */
 function getSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
-
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
-    // Light formatting
-    const header = sheet.getRange(1, 1, 1, HEADERS.length);
-    header.setBackground('#1d2535');
-    header.setFontColor('#f0b534');
-    header.setFontWeight('bold');
-    sheet.setColumnWidth(1, 160);   // ID
+    const hdr = sheet.getRange(1, 1, 1, HEADERS.length);
+    hdr.setBackground('#1d2535').setFontColor('#f0b534').setFontWeight('bold');
+    sheet.setColumnWidth(1, 160);
     sheet.setColumnWidth(HEADERS.indexOf('Thesis') + 1, 320);
     sheet.setColumnWidth(HEADERS.indexOf('Management') + 1, 320);
   }
-
   return sheet;
 }
 
-/* ── JSON helper ── */
-function jsonResponse(obj) {
+// Return JSON, or JSONP if ?callback= is present (lets a browser read cross-origin)
+function reply(obj, e) {
+  const json = JSON.stringify(obj);
+  const cb = e && e.parameter && e.parameter.callback;
+  if (cb) {
+    return ContentService
+      .createTextOutput(cb + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   return ContentService
-    .createTextOutput(JSON.stringify(obj))
+    .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }

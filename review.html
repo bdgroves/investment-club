@@ -87,6 +87,7 @@
       <button class="pill" onclick="setFilter('approved', this)">Approved</button>
       <button class="pill" onclick="setFilter('watch', this)">Watch</button>
       <button class="pill" onclick="setFilter('pass', this)">Pass</button>
+      <button class="pill" style="margin-left:auto;" onclick="refreshFromSheet()">↻ Refresh</button>
     </div>
 
     <!-- Cards -->
@@ -125,9 +126,23 @@
 
   /* ── Init ── */
   function init() {
+    // show cached immediately, then refresh from the sheet
     trades = loadTrades();
     renderAll();
+    refreshFromSheet();
   }
+
+  function refreshFromSheet() {
+    const container = document.getElementById('cards');
+    if (trades.length === 0) {
+      container.innerHTML = '<div class="empty"><div class="icon">⏳</div><p>Loading submissions…</p></div>';
+    }
+    loadTradesFromSheet(function (loaded) {
+      trades = loaded;
+      renderAll();
+    });
+  }
+
   if (sessionStorage.getItem('ic_auth') === '1') init();
 
   /* ── Filter ── */
