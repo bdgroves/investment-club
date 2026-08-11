@@ -1,6 +1,6 @@
 ﻿/* app.js - Investment Club shared logic. SHARED mode via Google Apps Script. */
 
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwxivmeZrARKTvao5_cJejqqPgxE76A6ELvdt4A-HOB9Uz48Z1iFoX-A-70D74g2-NWVA/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzZVp5J2EIHKujh-qhpjECgmo1vKd2Dl8MiXAAavAJ5zSTLScb-QTGxYrkwarbih8qjQw/exec';
 
 function loadTrades() {
   try { return JSON.parse(localStorage.getItem('ic_trades') || '[]'); } catch (e) { return []; }
