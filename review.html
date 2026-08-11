@@ -311,62 +311,29 @@
     if (t) { t.notes = val; updateTrade(t); }
   }
 
-  /* ── AI Synthesis ── */
-  async function runSynthesis() {
+  /* ── AI Synthesis (runs server-side via Apps Script) ── */
+  function runSynthesis() {
     if (trades.length === 0) {
       showToast('No submissions to synthesize yet.', true);
       return;
     }
 
     const btn = document.getElementById('synth-btn');
-    const out  = document.getElementById('synthesis-output');
+    const out = document.getElementById('synthesis-output');
     btn.disabled = true;
     btn.textContent = 'Analyzing…';
     out.className = 'visible';
     out.innerHTML = '<span class="thinking-dots">Claude is reading the submissions…</span>';
 
-    const summary = trades.map(t => `
-TICKER: ${t.ticker}${t.stock ? ' ('+t.stock+')' : ''}
-MEMBER: ${t.member}
-DATE: ${t.date}
-SECTOR: ${t.sector||'—'} | MARKET CAP: ${t.marketCap||'—'} | STYLE: ${t.growthIncome||'—'}
-PRICE TODAY: ${t.shareValue||'—'} | ENTRY TARGET: ${t.entryTarget||'—'} | EXIT: ${t.exit||'—'} | 52WK: ${t.low52||'—'}–${t.high52||'—'}
-VALUATION: Beta ${t.beta||'—'}, P/E ${t.peRatio||'—'}, P/Rev ${t.priceRevShare||'—'}, EPS ${t.eps||'—'}, Div ${t.dividend||'—'} (${t.dividendFreq||'—'})
-THESIS: ${t.thesis}
-MOAT: ${t.moat}
-WHY NOW: ${t.whyNow}
-PROS: ${t.pros}
-CONS: ${t.cons}
-MANAGEMENT: ${t.management}
-STATUS: ${t.status}
-    `.trim()).join('\n\n---\n\n');
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          system: `You are a senior investment analyst helping a club chairman review trade submissions from club members. 
-Be concise, direct, and insightful. Identify patterns, consensus, outliers, and the strongest ideas. 
-Use plain language — no jargon for its own sake. Format your response with clear sections using simple headers.`,
-          messages: [{
-            role: 'user',
-            content: `Here are this cycle's trade submissions from club members:\n\n${summary}\n\nPlease synthesize these submissions. Cover:\n1. Overall themes or sectors the club is converging on\n2. The strongest thesis or two and why\n3. Any shared risks or concerns across multiple submissions\n4. Notable outliers or contrarian ideas worth discussing\n5. Your quick take on which deserve the most committee time`
-          }]
-        })
-      });
-
-      const data = await response.json();
-      const text = (data.content || []).map(b => b.text || '').join('');
-      out.textContent = text || 'No response returned.';
-    } catch (err) {
-      out.innerHTML = `<span style="color:var(--red2);">Error reaching Claude API. Check your connection or API key in app.js.</span>`;
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Re-synthesize';
+    requestSynthesis(function (data) {
+      if (data && data.error) {
+        out.innerHTML = '<span style="color:var(--red2);">Synthesis unavailable: ' + esc(data.error) + '</span>';
+      } else {
+        out.textContent = (data && data.summary) ? data.summary : 'No summary returned.';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Re-synthesize';
+    });
   }
 </script>
 </body>

@@ -110,12 +110,26 @@
   ];
 
   function loadStarter() {
-    if (!confirm("This replaces any current submissions with the 3 starter trades. Continue?")) return;
-    try {
-      localStorage.setItem('ic_trades', JSON.stringify(STARTER));
-      showToast('✓ Loaded 3 starter trades. Open the Review Desk to see them.');
-    } catch (e) {
-      showToast('Could not write to storage.', true);
+    if (SHEET_URL) {
+      if (!confirm("This adds the 3 starter trades (AMD, VRT, SPCX) to the shared Google Sheet. Run this only once. Continue?")) return;
+      let sent = 0;
+      STARTER.forEach(function (t) {
+        // strip UI-only fields; give each a fresh id so rows are unique
+        const trade = Object.assign({}, t);
+        delete trade.open;
+        trade.id = 'seed-' + trade.ticker + '-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        sheetWrite({ action: 'submit', data: JSON.stringify({ trade: trade }) });
+        sent++;
+      });
+      showToast('✓ Sent ' + sent + ' starter trades to the sheet. Give it a few seconds, then open the Review Desk.');
+    } else {
+      if (!confirm("This replaces any current submissions with the 3 starter trades. Continue?")) return;
+      try {
+        localStorage.setItem('ic_trades', JSON.stringify(STARTER));
+        showToast('✓ Loaded 3 starter trades (local only). Open the Review Desk to see them.');
+      } catch (e) {
+        showToast('Could not write to storage.', true);
+      }
     }
   }
 

@@ -11,6 +11,9 @@
 
 const SHEET_NAME = 'Submissions';
 
+// Model used for the AI synthesis (change if you like)
+const SYNTH_MODEL = 'claude-sonnet-5';
+
 // Single source of truth: app field key  <->  sheet column header
 const FIELDS = [
   { key: 'id',            header: 'ID' },
@@ -48,6 +51,11 @@ const HEADERS = FIELDS.map(function (f) { return f.header; });
 
 /* ---------- GET: return all submissions (JSONP-aware) ---------- */
 function doGet(e) {
+  const action = e && e.parameter && e.parameter.action;
+  if (action === 'synthesize') {
+    return reply(synthesize(), e);
+  }
+
   const sheet = getSheet();
   const rows = sheet.getDataRange().getValues();
   let trades = [];
@@ -123,6 +131,85 @@ function getSheet() {
     sheet.setColumnWidth(HEADERS.indexOf('Management') + 1, 320);
   }
   return sheet;
+}
+
+/* ---------- AI synthesis (server-side Claude call) ---------- */
+function synthesize() {
+  try {
+    const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+    if (!key) {
+      return { error: 'No API key set. In Apps Script: Project Settings -> Script Properties -> add ANTHROPIC_API_KEY.' };
+    }
+
+    // light throttle so the public endpoint can't rapid-fire the API
+    const cache = CacheService.getScriptCache();
+    if (cache.get('synth_lock')) {
+      return { error: 'A synthesis just ran - give it a few seconds and try again.' };
+    }
+    cache.put('synth_lock', '1', 20);
+
+    const sheet = getSheet();
+    const rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) {
+      return { summary: 'No submissions yet to synthesize.' };
+    }
+
+    const trades = rows.slice(1).map(function (row) {
+      const o = {};
+      FIELDS.forEach(function (f, i) { o[f.key] = row[i]; });
+      return o;
+    });
+
+    const text = trades.map(function (t) {
+      return [
+        'TICKER: ' + t.ticker + (t.stock ? ' (' + t.stock + ')' : ''),
+        'MEMBER: ' + t.member + ' | DATE: ' + t.date,
+        'SECTOR: ' + t.sector + ' | CAP: ' + t.marketCap + ' | STYLE: ' + t.growthIncome,
+        'PRICE: ' + t.shareValue + ' | ENTRY: ' + t.entryTarget + ' | EXIT: ' + t.exit + ' | 52WK: ' + t.low52 + '-' + t.high52,
+        'VALUATION: Beta ' + t.beta + ', P/E ' + t.peRatio + ', P/Rev ' + t.priceRevShare + ', EPS ' + t.eps + ', Div ' + t.dividend + ' (' + t.dividendFreq + ')',
+        'THESIS: ' + t.thesis,
+        'MOAT: ' + t.moat,
+        'WHY NOW: ' + t.whyNow,
+        'PROS: ' + t.pros,
+        'CONS: ' + t.cons,
+        'MANAGEMENT: ' + t.management,
+        'STATUS: ' + t.status
+      ].join('\n');
+    }).join('\n\n---\n\n');
+
+    const payload = {
+      model: SYNTH_MODEL,
+      max_tokens: 1500,
+      system: 'You are a senior investment analyst helping an investment club committee review trade submissions from members. Be concise, direct, and insightful. Identify themes, consensus, outliers, and the strongest ideas. Use plain language and clear short sections.',
+      messages: [{
+        role: 'user',
+        content: "Here are this cycle's trade submissions:\n\n" + text +
+          '\n\nSynthesize them. Cover: 1) themes/sectors the club is converging on, ' +
+          '2) the strongest thesis or two and why, 3) shared risks across submissions, ' +
+          '4) notable outliers worth debating, 5) which deserve the most committee time.'
+      }]
+    };
+
+    const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+
+    const code = res.getResponseCode();
+    const body = JSON.parse(res.getContentText());
+    if (code !== 200) {
+      const msg = (body.error && body.error.message) ? body.error.message : 'request failed';
+      return { error: 'API ' + code + ': ' + msg };
+    }
+
+    const summary = (body.content || []).map(function (b) { return b.text || ''; }).join('');
+    return { summary: summary || 'No summary returned.' };
+  } catch (err) {
+    return { error: String(err) };
+  }
 }
 
 // Return JSON, or JSONP if ?callback= is present (lets a browser read cross-origin)
