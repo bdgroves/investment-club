@@ -78,6 +78,10 @@
         <button class="btn btn-ghost btn-sm" id="synth-btn" onclick="runSynthesis()">Synthesize Submissions</button>
       </div>
       <div id="synthesis-output"></div>
+      <div id="synth-actions" style="display:none; gap:10px; margin-top:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="downloadReport()">⭳ Download report</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyReport()">⧉ Copy</button>
+      </div>
     </div>
 
     <!-- Filters -->
@@ -326,14 +330,115 @@
     out.innerHTML = '<span class="thinking-dots">Claude is reading the submissions…</span>';
 
     requestSynthesis(function (data) {
+      const actions = document.getElementById('synth-actions');
       if (data && data.error) {
         out.innerHTML = '<span style="color:var(--red2);">Synthesis unavailable: ' + esc(data.error) + '</span>';
+        actions.style.display = 'none';
       } else {
-        out.textContent = (data && data.summary) ? data.summary : 'No summary returned.';
+        const text = (data && data.summary) ? data.summary : 'No summary returned.';
+        out.textContent = text;
+        lastSynthesis = text;
+        actions.style.display = 'flex';
       }
       btn.disabled = false;
       btn.textContent = 'Re-synthesize';
     });
+  }
+
+  /* ── Save / export the synthesis report ── */
+  let lastSynthesis = '';
+
+  function reportStamp() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // minimal markdown -> HTML (headers, bold, lists, tables, rules, paragraphs)
+  function mdToHtml(md) {
+    const lines = md.replace(/\r/g, '').split('\n');
+    let html = '', inUl = false, inOl = false, inTable = false;
+    function closeLists() {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+    }
+    function closeTable() { if (inTable) { html += '</tbody></table>'; inTable = false; } }
+    const inline = s => esc(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+
+    for (let raw of lines) {
+      const line = raw.trimEnd();
+      if (/^\s*\|(.+)\|\s*$/.test(line)) {
+        const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        if (cells.every(c => /^:?-{2,}:?$/.test(c))) continue; // separator row
+        if (!inTable) { closeLists(); html += '<table><tbody>'; inTable = true; }
+        html += '<tr>' + cells.map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>';
+        continue;
+      } else { closeTable(); }
+
+      if (/^###\s+/.test(line))      { closeLists(); html += '<h3>' + inline(line.replace(/^###\s+/, '')) + '</h3>'; }
+      else if (/^##\s+/.test(line))  { closeLists(); html += '<h2>' + inline(line.replace(/^##\s+/, '')) + '</h2>'; }
+      else if (/^#\s+/.test(line))   { closeLists(); html += '<h1>' + inline(line.replace(/^#\s+/, '')) + '</h1>'; }
+      else if (/^(-{3,}|\*{3,})$/.test(line)) { closeLists(); html += '<hr>'; }
+      else if (/^\s*[-*]\s+/.test(line)) {
+        if (!inUl) { closeLists(); html += '<ul>'; inUl = true; }
+        html += '<li>' + inline(line.replace(/^\s*[-*]\s+/, '')) + '</li>';
+      }
+      else if (/^\s*\d+\.\s+/.test(line)) {
+        if (!inOl) { closeLists(); html += '<ol>'; inOl = true; }
+        html += '<li>' + inline(line.replace(/^\s*\d+\.\s+/, '')) + '</li>';
+      }
+      else if (line.trim() === '') { closeLists(); }
+      else { closeLists(); html += '<p>' + inline(line) + '</p>'; }
+    }
+    closeLists(); closeTable();
+    return html;
+  }
+
+  function buildReportDoc() {
+    const body = mdToHtml(lastSynthesis || 'No synthesis available.');
+    const count = trades.length;
+    const tickers = trades.map(t => t.ticker).filter(Boolean).join(', ');
+    return '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<title>Investment Club — Synthesis ' + reportStamp() + '</title><style>' +
+      'body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 24px;color:#1a1a1a;line-height:1.6}' +
+      'h1{font-size:1.5rem;border-bottom:2px solid #d4930a;padding-bottom:6px}' +
+      'h2{font-size:1.15rem;color:#8a5a00;margin-top:1.6em}h3{font-size:1rem}' +
+      '.meta{color:#666;font-size:.85rem;margin-bottom:1.5em}' +
+      'table{border-collapse:collapse;width:100%;margin:1em 0}td{border:1px solid #ccc;padding:6px 10px;font-size:.9rem}' +
+      'code{background:#f2f2f2;padding:1px 4px;border-radius:3px;font-size:.9em}hr{border:none;border-top:1px solid #ddd;margin:1.5em 0}' +
+      'ul,ol{padding-left:1.4em}li{margin:.3em 0}' +
+      '.head{font-family:system-ui,sans-serif}.brand{color:#d4930a;font-weight:700;letter-spacing:.5px;font-size:.8rem;text-transform:uppercase}' +
+      '</style></head><body>' +
+      '<div class="head"><div class="brand">Lakewood Investment Club</div>' +
+      '<h1 style="font-family:system-ui,sans-serif;">AI Synthesis Report</h1>' +
+      '<div class="meta">' + reportStamp() + ' · ' + count + ' submissions · ' + esc(tickers) + '</div></div>' +
+      body +
+      '<hr><p style="color:#999;font-size:.75rem;">Generated by the club trade journal. Informational only — not investment advice.</p>' +
+      '</body></html>';
+  }
+
+  function downloadReport() {
+    if (!lastSynthesis) { showToast('Run a synthesis first.', true); return; }
+    const blob = new Blob([buildReportDoc()], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Investment-Club-Synthesis-' + reportStamp() + '.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Report downloaded. Open it in a browser or Word.');
+  }
+
+  function copyReport() {
+    if (!lastSynthesis) { showToast('Run a synthesis first.', true); return; }
+    navigator.clipboard.writeText(lastSynthesis).then(
+      () => showToast('Report copied to clipboard.'),
+      () => showToast('Copy failed — select the text manually.', true)
+    );
   }
 </script>
 </body>

@@ -196,7 +196,7 @@ function synthesize() {
 
     const payload = {
       model: SYNTH_MODEL,
-      max_tokens: 1500,
+      max_tokens: 2500,
       system: 'You are a senior investment analyst helping an investment club committee review trade submissions from members. Be concise, direct, and insightful. Identify themes, consensus, outliers, and the strongest ideas. Use plain language and clear short sections.',
       messages: [{
         role: 'user',
@@ -223,9 +223,30 @@ function synthesize() {
     }
 
     const summary = (body.content || []).map(function (b) { return b.text || ''; }).join('');
+    logSynthesis(summary, trades);
     return { summary: summary || 'No summary returned.' };
   } catch (err) {
     return { error: String(err) };
+  }
+}
+
+// Append each synthesis to a "Synthesis Log" tab for a running archive
+function logSynthesis(summary, trades) {
+  try {
+    if (!summary) return;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let log = ss.getSheetByName('Synthesis Log');
+    if (!log) {
+      log = ss.insertSheet('Synthesis Log');
+      log.appendRow(['Timestamp', 'Submissions', 'Tickers', 'Report']);
+      log.setFrozenRows(1);
+      log.getRange(1, 1, 1, 4).setBackground('#1d2535').setFontColor('#f0b534').setFontWeight('bold');
+      log.setColumnWidth(4, 600);
+    }
+    const tickers = (trades || []).map(function (t) { return t.ticker; }).filter(String).join(', ');
+    log.appendRow([new Date().toISOString(), (trades || []).length, tickers, summary]);
+  } catch (e) {
+    // logging must never break the synthesis response
   }
 }
 
