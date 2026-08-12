@@ -52,8 +52,25 @@ const HEADERS = FIELDS.map(function (f) { return f.header; });
 /* ---------- GET: return all submissions (JSONP-aware) ---------- */
 function doGet(e) {
   const action = e && e.parameter && e.parameter.action;
+
   if (action === 'synthesize') {
     return reply(synthesize(), e);
+  }
+
+  // Writes routed through GET (JSONP) because browser no-cors POST
+  // won't follow Apps Script's redirect. Payload arrives as ?data=<json>.
+  if (action === 'submit' || action === 'decision') {
+    try {
+      const payload = JSON.parse(e.parameter.data || '{}');
+      if (action === 'submit') {
+        appendTrade(payload.trade || payload);
+      } else {
+        updateDecision(payload.id, payload.status, payload.notes);
+      }
+      return reply({ ok: true }, e);
+    } catch (err) {
+      return reply({ error: String(err) }, e);
+    }
   }
 
   const sheet = getSheet();

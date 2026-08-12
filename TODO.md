@@ -1,46 +1,36 @@
 # Investment Club Trade Journal — TODO
 
-Target: ready for a club meeting. No fixed date — polish first.
+Live at: https://lakewood-investment-club.netlify.app (hosted on Netlify)
 
 ## ✅ Done
-
-- [x] Form matches Bob's paper template field-for-field (incl. "…and nature of the company")
-- [x] Price + fundamentals blocks (share value, entry/exit, 52-wk, sector, cap, beta, P/E, EPS, dividend…)
+- [x] Submission form matching the club's paper template (incl. "…and nature of the company")
 - [x] Review desk: fundamentals grid, thesis pull-out, pros/cons, Approve/Watch/Pass + notes, filters, stats
-- [x] "Committee" language throughout (not "chairman")
-- [x] Google Sheets backend live — shared reads (JSONP) + writes (POST) confirmed
-- [x] Hosted at brooksgroves.com/investment-club
-- [x] Three starter trades drafted (AMD / VRT / SPCX) from the July 8 discussion
+- [x] Google Sheets backend — shared reads (JSONP) + writes (JSONP GET)
+- [x] AI synthesis running SERVER-SIDE (Apps Script calls Claude; API key in Script Properties)
+- [x] Six-name seed loaded (AMD, VRT, SPCX + GLD, PDBA, XLU) with full fundamentals
+- [x] Hosted on Netlify (moved off GitHub Pages after path/Jekyll/cache fights)
 
-## 🔨 Polish (before launch)
+## 🔨 Polish (before wider club use)
+- [ ] Set the committee's real passphrase (replace `clubhouse` in review.html)
+- [ ] Raise synthesis max_tokens in Code.gs (1500 → ~2500) so long summaries don't cut off
+- [ ] Fill PDBA and XLU price/valuation fields (left blank — ETFs)
+- [ ] Mobile polish pass
+- [ ] First-run empty state / member onboarding copy
+- [ ] One-page "how to use" for the club
 
-**P1 — blockers for a real launch**
-- [ ] **Fix AI Synthesis for production.** Route the Claude call through Apps Script (API key in Script Properties), return via JSONP. Currently calls the API from the browser with no key → fails on the live site.
-- [ ] **Seed the 3 starter trades into the shared sheet** so the review desk isn't empty when the club logs in (wire `seed.html` to POST, or just enter via the form).
-- [ ] **Set the committee's real passphrase** (replace `clubhouse` in `review.html`).
+## 🚀 Deploy / ops
+- [ ] Connect Netlify to the GitHub repo so `git push` auto-deploys (no more folder drag)
+- [ ] Keep seed-macro.html as a local/admin tool — not linked from the member-facing site
 
-**P2 — makes it feel finished**
-- [ ] Fundamentals pass: fill current P/E, beta, market cap for AMD / VRT / SPCX
-- [ ] Mobile polish pass (form + review desk on a phone)
-- [ ] First-run empty-state / one-line "how this works" for members
-- [ ] Update README + any docs still pointing at `bdgroves.github.io` → `brooksgroves.com`
-- [ ] One-page "How to use" for the club (adapt the existing project brief)
+## 💤 Someday
+- [ ] Auto-refresh prices via an Apps Script time trigger
+- [ ] Per-trade AI "second opinion"
+- [ ] Voting/scoring across the committee
+- [ ] Pre-meeting email digest
 
-**P3 — nice to have**
-- [ ] Auto-refresh prices via an Apps Script time trigger (the "do we need Actions?" answer — do it Google-side, not GitHub Actions)
-- [ ] Decide + document: custom form vs. Google Form for member intake
-- [ ] Retire or repurpose the standalone `bdgroves/investment-club` repo (Bob's fork target)
-
-## 🚀 Launch
-
-- [ ] Seed a couple of real trades so it's not empty
-- [ ] Share URL + passphrase with the club
-- [ ] Brief Bob on the review desk (submit → review → decide → synthesize)
-- [ ] Collect feedback after the first meeting; fold into a v2 list
-
-## 💤 Parked / someday
-
-- [ ] Per-trade AI "second opinion" button
-- [ ] Track record over time (which theses aged well)
-- [ ] Voting/scoring so the whole committee weighs in, not just notes
-- [ ] Email/text digest to members before each meeting
+## Key facts (don't lose these)
+- LIVE Apps Script deployment ends in `/AKfycbzZVp5J...` — only ever edit THAT one
+  (Apps Script → Deploy → Manage deployments → ✏️ → Version: New version). Never "New deployment".
+- Sheet: the script writes to the `Submissions` tab (auto-created).
+- Review passphrase: `clubhouse` (change before real use).
+- Host: Netlify (drag the folder to deploy, or connect the repo).

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment Club — Load Full Worldview Seed</title>
+<style>
+  body { font-family: system-ui, sans-serif; background:#0e1117; color:#c5d3df; max-width:760px; margin:0 auto; padding:40px 24px; line-height:1.6; }
+  h1 { color:#f0b534; font-size:1.4rem; }
+  .card { background:#161c26; border:1px solid rgba(58,74,92,0.6); border-radius:6px; padding:16px 20px; margin:14px 0; }
+  .t { font-family:'Space Mono',monospace; color:#f0b534; font-weight:700; }
+  .sub { color:#8fa3b8; font-size:.85rem; }
+  button { font-family:inherit; font-weight:600; font-size:.9rem; padding:11px 22px; border-radius:5px; cursor:pointer; margin-right:10px; }
+  .go { background:#d4930a; color:#0e1117; border:none; }
+  .clr { background:none; color:#8fa3b8; border:1px solid #3a4a5c; }
+  .note { font-size:.8rem; color:#8fa3b8; margin-top:18px; }
+  #status { margin-top:16px; color:#2db87d; font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Load the Club's Full Worldview</h1>
+<p class="sub">Six seed trades — the three AI-infrastructure bets plus three defensive / real-asset ideas pulled from the LIC reading notes. Loading these lets the AI synthesis analyze the club's <em>whole</em> book, including the tension between the growth bets and the cautious macro reading.</p>
+
+<div class="card"><span class="t">AMD</span> — Alt-chip hedge to Nvidia <span class="sub">(Technology · Large · Growth)</span></div>
+<div class="card"><span class="t">VRT</span> — Vertiv, data-center cooling &amp; power <span class="sub">(Industrials · Large · Growth)</span></div>
+<div class="card"><span class="t">SPCX</span> — SpaceX, space-based data centers <span class="sub">(Technology · Large · Growth · speculative)</span></div>
+<div class="card"><span class="t">PDBA</span> — Ag commodities, supply-shock trade <span class="sub">(Materials · ETF · Both)</span></div>
+<div class="card"><span class="t">GLD</span> — Gold, central-bank / de-dollarization hedge <span class="sub">(Materials · Large · Growth)</span></div>
+<div class="card"><span class="t">XLU</span> — Utilities, boomer / defensive-income play <span class="sub">(Utilities · Large · Income)</span></div>
+
+<div style="margin-top:24px;">
+  <button class="go" onclick="loadAll()">Load All 6 to Sheet →</button>
+  <button class="clr" onclick="alert('To clear: delete the rows directly in the Google Sheet, then re-run this loader.')">How to clear?</button>
+</div>
+<div id="status"></div>
+<p class="note">Run once. Each click adds six fresh rows. If you double-click, delete the extras in the Google Sheet. Recommended: clear the existing AMD/VRT/SPCX rows in the sheet first so you get a clean six-name book.</p>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzZVp5J2EIHKujh-qhpjECgmo1vKd2Dl8MiXAAavAJ5zSTLScb-QTGxYrkwarbih8qjQw/exec';
+
+function sheetWrite(paramObj) {
+  var cbName = '__s_' + Math.random().toString(36).slice(2);
+  var s;
+  function cleanup(){ try{delete window[cbName];}catch(e){window[cbName]=undefined;} if(s&&s.parentNode)s.parentNode.removeChild(s); }
+  window[cbName] = function(){ cleanup(); };
+  var qs = Object.keys(paramObj).map(function(k){ return k+'='+encodeURIComponent(paramObj[k]); }).join('&');
+  s = document.createElement('script');
+  s.src = SHEET_URL + '?' + qs + '&callback=' + cbName + '&t=' + Date.now();
+  s.onerror = cleanup;
+  document.head.appendChild(s);
+  setTimeout(cleanup, 15000);
+}
+
+const TRADES = [
+  {
+    date:"2026-08-12", stock:"Advanced Micro Devices", ticker:"AMD", exchange:"NASDAQ", member:"Club — AI alt-chip",
+    shareValue:"483", entryTarget:"460", exit:"600", high52:"490", low52:"160",
+    sector:"Technology", marketCap:"Large", growthIncome:"Growth",
+    beta:"2.49", peRatio:"123", priceRevShare:"19", eps:"3.94", dividend:"0", dividendFreq:"None",
+    thesis:"The most credible near-term hedge against Nvidia concentration. Hyperscalers want a second AI-accelerator source to escape Nvidia's pricing power; AMD's MI GPUs + ROCm are the only at-scale alternative. Wins if customers want a #2, without needing to beat Nvidia.",
+    moat:"Strong x86 server franchise and chiplet lead. Honest gap: software moat far weaker than CUDA — which the club should note is the whole ballgame.",
+    whyNow:"Dual-sourcing accelerating; next-gen MI ramping into a market bigger than Nvidia can serve alone. But stock has run ~196% in 52 weeks — priced for a lot.",
+    pros:"Real, funded second-source demand; x86 share gains; cheaper than NVDA; accelerator optionality.",
+    cons:"CUDA lock-in; P/E ~123 leaves no margin of safety; Nvidia's cadence brutal; could stay perennial #2.",
+    management:"Bull: hyperscaler names MI a primary second source -> add. Base: x86 carries it. Bear: ROCm gap persists / MI slips -> trim. Time stop: two earnings for accelerator traction.",
+    status:"pending", notes:"AI capex bet #1 (compute layer)."
+  },
+  {
+    date:"2026-08-12", stock:"Vertiv Holdings", ticker:"VRT", exchange:"NYSE", member:"Club — picks & shovels",
+    shareValue:"242", entryTarget:"230", exit:"340", high52:"360", low52:"98",
+    sector:"Industrials", marketCap:"Large", growthIncome:"Growth",
+    beta:"2.04", peRatio:"54", priceRevShare:"8.6", eps:"4.51", dividend:"0.15", dividendFreq:"Quarterly",
+    thesis:"Direct pick-and-shovel on AI's power/thermal layer. Above certain chip TDPs, liquid cooling is mandatory, not optional — demand is physics, and revenue is spread across every AI winner rather than one roadmap.",
+    moat:"Sticky installed base + service; full-stack thermal & power; incumbency inside hyperscale.",
+    whyNow:"Liquid-cooling transition inflecting. BUT: stock fell ~14% after a mixed Q2 (reported 7/29) despite raised guidance, and analysts cut targets (RBC $337, Goldman $301) — the 'is it priced in' debate just got real.",
+    pros:"Diversified AI-capex beneficiary; liquid-cooling ramp; recurring service; falsifiable checkpoint (order growth QoQ).",
+    cons:"Crowded, priced for perfection; post-Q2 selloff signals sentiment shift; cyclical if AI capex pauses.",
+    management:"Bull: cooling adoption beats -> hold/run. Base: backlog converts. Bear: capex pause hits orders -> trim. Time stop: watch order growth QoQ; thesis breaks if backlog stalls.",
+    status:"pending", notes:"AI capex bet #2 (power/cooling). Verify not already priced in."
+  },
+  {
+    date:"2026-08-12", stock:"SpaceX", ticker:"SPCX", exchange:"NASDAQ", member:"Club — space moonshot",
+    shareValue:"139", entryTarget:"130", exit:"225", high52:"226", low52:"105",
+    sector:"Technology", marketCap:"Large", growthIncome:"Growth",
+    beta:"N/A", peRatio:"N/A", priceRevShare:"79", eps:"-0.68", dividend:"0", dividendFreq:"None",
+    thesis:"The only public pure-play on space-based data centers — a bet on one variable: Starship launch cost. If cost-to-orbit collapses, orbital compute sidesteps power/water/land/grid constraints. A launch-economics bet wrapped in a rocket + Starlink + xAI business.",
+    moat:"Reusable-launch dominance, Starlink base, vertical integration across rockets/satellites/xAI. No competitor has all four.",
+    whyNow:"Newly public (IPO 6/12/26). FCC filing for up to ~1M data-center satellites; stated goal of 100 GW of compute to orbit. Fell below its $135 IPO price for weeks, just rebounded above it after first earnings call.",
+    pros:"Only liquid space-DC vehicle; launch-cost leader controls the critical path; Starlink funds the moonshot; huge optionality.",
+    cons:"Unprofitable (EPS -0.68 TTM); space-DC economics ~4x terrestrial, ~2040 parity; analysts split (CFRA sell); Musk ~82% voting control; high vol.",
+    management:"Venture-style optionality — size tiny. Bull: Starship hits low-cost cadence -> add slowly. Base: hold small; space-DC is a free call option. Bear: Starship setbacks -> predefine max loss. Judge on Starship milestones, not quarters.",
+    status:"pending", notes:"AI capex bet #3 (skip-Earth). Speculative; size accordingly."
+  },
+  {
+    date:"2026-08-12", stock:"Invesco Agriculture Commodity Strategy (No K-1)", ticker:"PDBA", exchange:"NASDAQ", member:"LIC notes — ag supply shock",
+    shareValue:"", entryTarget:"", exit:"", high52:"", low52:"",
+    sector:"Materials", marketCap:"ETF", growthIncome:"Both",
+    beta:"N/A", peRatio:"N/A", priceRevShare:"N/A", eps:"N/A", dividend:"", dividendFreq:"",
+    thesis:"Agricultural markets face a rare back-to-back supply shock: the delayed hit from high energy/fertilizer costs plus El Nino disruption, both pointing to lower crop yields this fall. Add likely dollar weakness and it sets up a tactical mid-summer entry before the trends converge.",
+    moat:"Diversified, actively-managed exposure across wheat, corn, soybeans, cattle, and lean hogs with an optimized futures roll — no single-commodity risk, no K-1 tax hassle.",
+    whyNow:"Fertilizer still +26% YoY, diesel +44% YoY (25-35% of corn/wheat variable cost). Planting decisions already locked in against high costs -> yields drop this fall. Enter before it's priced in.",
+    pros:"Real-asset / inflation hedge; diversified basket; dollar-weakness tailwind; low correlation to the club's tech-heavy book.",
+    cons:"Commodity timing is hard; a big harvest or strong dollar kills it; roll/contango drag; tactical trade with a shelf life, not a compounder.",
+    management:"Tactical mid-summer entry; scale out into fall strength as the supply-shock narrative plays out; hard exit if the El Nino/yield thesis doesn't show up in harvest reports.",
+    status:"pending", notes:"From LIC notes — Embree's preferred vehicle (or DBA). Diversifier vs. the AI book."
+  },
+  {
+    date:"2026-08-12", stock:"SPDR Gold Shares", ticker:"GLD", exchange:"NYSE", member:"LIC notes — gold / de-dollarization",
+    shareValue:"397", entryTarget:"", exit:"", high52:"510", low52:"305",
+    sector:"Materials", marketCap:"Large", growthIncome:"Growth",
+    beta:"0.19", peRatio:"N/A", priceRevShare:"N/A", eps:"N/A", dividend:"0", dividendFreq:"None",
+    thesis:"Gold as a hedge against a shifting monetary order. Central banks bought 289 tons in Q2 (a sharp rebound), and there's a growing view that foreign holders of US Treasuries are 'weak hands' amid US Treasury yen/dollar maneuvering. Structural, policy-driven demand — not a sentiment trade.",
+    moat:"Oldest reserve asset; central-bank buying is price-insensitive and sticky; no counterparty/credit risk in a geostrategic-stress regime.",
+    whyNow:"Best week for gold in seven months; central-bank accumulation accelerating; real yields stalling; the 'rising geostrategic risk / new rules for global markets' theme.",
+    pros:"Portfolio hedge uncorrelated to the AI-growth book; central-bank tailwind; +29% over 52 weeks with momentum; benefits from dollar weakness.",
+    cons:"No yield, no cash flow; a hawkish Fed / strong dollar caps it; already ran a long way ($305->$510 range); crowded (options 'gold bugs' piling in).",
+    management:"Core hedge sizing, not a trade; trim only if real yields spike hard. This is insurance for the rest of the book.",
+    status:"pending", notes:"From LIC notes — Boock Report, remain long. The book's macro hedge."
+  },
+  {
+    date:"2026-08-12", stock:"Utilities Select Sector SPDR", ticker:"XLU", exchange:"NYSE", member:"LIC notes — Rosenberg defensive income",
+    shareValue:"", entryTarget:"", exit:"", high52:"", low52:"",
+    sector:"Utilities", marketCap:"Large", growthIncome:"Income",
+    beta:"0.5", peRatio:"", priceRevShare:"N/A", eps:"", dividend:"", dividendFreq:"Quarterly",
+    thesis:"Rosenberg's demographic case: 40-50M boomers are entering the retirement drawdown window with high sequence-of-returns risk, RMDs forcing selling into any downturn, from a CAPE near 40x. Retirement can't be funded from stocks alone -> a structural bid for safe, blue-chip dividend payers (utilities and REITs).",
+    moat:"Regulated, rate-based cash flows; defensive demand; sneaky AI-power beneficiary (data-center electricity load) — income with an AI-capex kicker.",
+    whyNow:"US household balance sheet is 73% equities / 7% fixed income — a demographic rotation toward income is 'a change ahead of necessity, not desire.' CAPE at 41x ('exit sign') argues for defense.",
+    pros:"Steady dividend income; low beta ballast; defensive if the CAPE-40x warning plays out; data-center power-demand tailwind.",
+    cons:"Rate-sensitive; low growth; lags badly if the AI-growth trade keeps ripping; 'safe' isn't cheap after the utility re-rating.",
+    management:"Income anchor / ballast to the aggressive book; add on rate-driven dips; judged on dividend durability, not price pop.",
+    status:"pending", notes:"From LIC notes — Rosenberg boomer/sequence-risk thesis. Counterweight to the growth bets."
+  }
+];
+
+function loadAll() {
+  if (!confirm("Add all 6 seed trades to the shared Google Sheet? Run once. (Clear existing rows in the sheet first for a clean set.)")) return;
+  var status = document.getElementById('status');
+  status.textContent = 'Sending… (one every ~1.5s so they don\u2019t collide)';
+  TRADES.forEach(function (t, i) {
+    setTimeout(function () {
+      var trade = Object.assign({}, t);
+      trade.id = 'seed-' + trade.ticker + '-' + Date.now() + '-' + Math.floor(Math.random()*100000);
+      sheetWrite({ action:'submit', data: JSON.stringify({ trade: trade }) });
+      status.textContent = 'Sent ' + (i + 1) + ' of ' + TRADES.length + ' (' + trade.ticker + ')…';
+      if (i === TRADES.length - 1) {
+        setTimeout(function () {
+          status.textContent = 'All ' + TRADES.length + ' sent. Wait ~10s, then Review Desk \u2192 Refresh \u2192 Synthesize.';
+        }, 2000);
+      }
+    }, i * 1500);
+  });
+}
+</script>
+</body>
+</html>
