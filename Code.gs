@@ -201,13 +201,17 @@ function synthesize() {
     const payload = {
       model: SYNTH_MODEL,
       max_tokens: 2500,
-      system: 'You are a senior investment analyst helping an investment club committee review trade submissions from members. Be concise, direct, and insightful. Identify themes, consensus, outliers, and the strongest ideas. Use plain language and clear short sections.',
+      system: 'You are a neutral discussion facilitator for an investment club. Members submit their own trade ideas, and the club decides together. Your job is to help them have a well-informed conversation — NOT to grade, rank, score, or recommend. Never say a submission is weak, strong, best, or worst. Never tell the club what to buy, sell, hold, approve, or pass. Present each idea fairly, surface the questions and considerations worth discussing, and add useful context. Be concise, even-handed, and respectful of the members who did the work. Plain language, clear short sections.',
       messages: [{
         role: 'user',
-        content: "Here are this cycle's trade submissions:\n\n" + text +
-          '\n\nSynthesize them. Cover: 1) themes/sectors the club is converging on, ' +
-          '2) the strongest thesis or two and why, 3) shared risks across submissions, ' +
-          '4) notable outliers worth debating, 5) which deserve the most committee time.'
+        content: "Here are this cycle's trade submissions from club members:\n\n" + text +
+          '\n\nPrepare a neutral discussion brief for the meeting. Do NOT rank, grade, or recommend anything. Cover:\n' +
+          '1) A brief, fair summary of each submission in the members\' own framing.\n' +
+          '2) Themes or connections across the submissions (sectors, shared assumptions, how they relate).\n' +
+          '3) For each idea, 2-3 open questions or considerations the club may want to discuss (things to verify, weigh, or think through) — framed as questions, not judgments.\n' +
+          '4) Any shared risks or context worth the whole club keeping in mind.\n' +
+          '5) A short list of discussion prompts to help the meeting get going.\n\n' +
+          'Keep it balanced — give every submission fair attention. The club makes all the decisions; you are only helping them prepare.'
       }]
     };
 
