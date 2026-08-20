@@ -57,6 +57,10 @@ function doGet(e) {
     return reply(synthesize(), e);
   }
 
+  if (action === 'lookup') {
+    return reply(lookupTicker((e.parameter.ticker || '').toUpperCase()), e);
+  }
+
   // Writes routed through GET (JSONP) because browser no-cors POST
   // won't follow Apps Script's redirect. Payload arrives as ?data=<json>.
   if (action === 'submit' || action === 'decision') {
@@ -248,6 +252,86 @@ function logSynthesis(summary, trades) {
   } catch (e) {
     // logging must never break the synthesis response
   }
+}
+
+/* ---------- Ticker lookup: objective fundamentals from a market-data API ---------- */
+function lookupTicker(ticker) {
+  try {
+    if (!ticker) return { error: 'No ticker provided.' };
+    const key = PropertiesService.getScriptProperties().getProperty('FINNHUB_API_KEY');
+    if (!key) {
+      return { error: 'Auto-fill not set up yet (no market-data key). You can fill the numbers by hand.' };
+    }
+
+    const base = 'https://finnhub.io/api/v1/';
+    function get(path) {
+      const res = UrlFetchApp.fetch(base + path + '&token=' + key, { muteHttpExceptions: true });
+      if (res.getResponseCode() !== 200) return {};
+      try { return JSON.parse(res.getContentText()); } catch (e) { return {}; }
+    }
+
+    const quote   = get('quote?symbol=' + encodeURIComponent(ticker));
+    const profile = get('stock/profile2?symbol=' + encodeURIComponent(ticker));
+    const m       = (get('stock/metric?symbol=' + encodeURIComponent(ticker) + '&metric=all').metric) || {};
+
+    if (!profile.name && !(quote.c > 0)) {
+      return { error: 'No data found for "' + ticker + '". Check the symbol, or fill by hand.' };
+    }
+
+    function num(v, dp) {
+      if (v === undefined || v === null || v === '' || isNaN(v)) return '';
+      return Number(v).toFixed(dp === undefined ? 2 : dp);
+    }
+    // market cap (Finnhub gives millions) -> Large / Mid / Small bucket
+    let cap = '';
+    const mc = profile.marketCapitalization;
+    if (mc) { cap = mc >= 10000 ? 'Large' : (mc >= 2000 ? 'Mid' : 'Small'); }
+
+    const div = m.dividendPerShareTTM;
+    const pe  = (m.peTTM !== undefined ? m.peTTM : m.peBasicExclExtraTTM);
+    const eps = (m.epsTTM !== undefined ? m.epsTTM : m.epsBasicExclExtraItemsTTM);
+
+    return {
+      name: profile.name || '',
+      exchange: profile.exchange || '',
+      price: num(quote.c),
+      high52: num(m['52WeekHigh']),
+      low52: num(m['52WeekLow']),
+      sector: mapSector(profile.finnhubIndustry || ''),
+      marketCap: cap,
+      beta: num(m.beta),
+      peRatio: num(pe, 1),
+      priceRevShare: num(m.psTTM, 1),
+      eps: num(eps),
+      dividend: div ? num(div) : '0',
+      dividendFreq: (div && div > 0) ? 'Quarterly' : 'None',
+      asOf: new Date().toISOString().slice(0, 10)
+    };
+  } catch (err) {
+    return { error: 'Lookup error: ' + String(err) };
+  }
+}
+
+// Map a market-data industry string to the form's Sector dropdown options
+function mapSector(ind) {
+  if (!ind) return '';
+  const s = ind.toLowerCase();
+  const has = function () {
+    for (var i = 0; i < arguments.length; i++) { if (s.indexOf(arguments[i]) !== -1) return true; }
+    return false;
+  };
+  if (has('semiconductor', 'software', 'hardware', 'technology', 'it services', 'electronic')) return 'Technology';
+  if (has('bank', 'insurance', 'financial', 'capital markets', 'asset management')) return 'Financial';
+  if (has('oil', 'gas', 'energy', 'coal', 'petroleum')) return 'Energy';
+  if (has('pharma', 'biotech', 'health', 'medical', 'life science', 'drug')) return 'Healthcare';
+  if (has('utilit')) return 'Utilities';
+  if (has('real estate', 'reit')) return 'Real Estate';
+  if (has('telecom', 'media', 'communication', 'entertainment', 'interactive')) return 'Communication Services';
+  if (has('chemical', 'metal', 'mining', 'materials', 'steel', 'paper', 'forestry')) return 'Materials';
+  if (has('aerospace', 'defense', 'machinery', 'industrial', 'construction', 'transportation', 'airlines', 'logistics', 'engineering')) return 'Industrials';
+  if (has('food', 'beverage', 'tobacco', 'household', 'staple', 'grocery')) return 'Consumer Staples';
+  if (has('retail', 'auto', 'apparel', 'hotel', 'restaurant', 'leisure', 'consumer', 'travel', 'luxury')) return 'Consumer Discretionary';
+  return ''; // no confident match — let the member pick
 }
 
 // Return JSON, or JSONP if ?callback= is present (lets a browser read cross-origin)
