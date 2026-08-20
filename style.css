@@ -602,3 +602,38 @@ select option { background: var(--slate2); }
   border-bottom: 1px solid transparent;
 }
 .guide-link a:hover { border-bottom-color: var(--gold, #d4930a); }
+
+/* Warm confirmation panel after a submission lands */
+.confirm-panel {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: linear-gradient(180deg, rgba(45,184,125,0.12), rgba(45,184,125,0.05));
+  border: 1px solid rgba(45,184,125,0.45);
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin: 18px 0 26px;
+}
+.confirm-check {
+  flex: none;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #2db87d;
+  color: #0e1117;
+  font-size: 1.4rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.confirm-title {
+  font-family: system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #35c88a;
+  margin-bottom: 4px;
+}
+.confirm-text {
+  color: var(--cloud, #c5d3df);
+  font-size: .92rem;
+  line-height: 1.5;
+}
+.confirm-actions { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+.confirm-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }

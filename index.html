@@ -26,6 +26,8 @@
   <p class="section-sub">Complete your homework below. Every field matters — a strong submission helps the committee make a fast, well-informed decision.</p>
   <p class="guide-link">New to this? <a href="guide.html" target="_blank">Read the quick plain-English guide →</a></p>
 
+  <div id="confirm-panel" class="confirm-panel" style="display:none;"></div>
+
   <!-- Block 1: Identification -->
   <div class="form-block">
     <div class="form-block-title">Trade Identification</div>
@@ -341,10 +343,34 @@
 
     FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('f-date').valueAsDate = new Date();
+    document.getElementById('lookup-status').textContent = '';
 
-    showToast('✓ Trade submitted. The committee can review it on the Review Desk.');
+    // Warm, persistent confirmation (a fleeting toast is easy to miss)
+    const panel = document.getElementById('confirm-panel');
+    panel.innerHTML =
+      '<div class="confirm-check">✓</div>' +
+      '<div class="confirm-body">' +
+        '<div class="confirm-title">Got it! Your ' + ticker + ' trade is in.</div>' +
+        '<div class="confirm-text">The committee will see it before the next meeting. ' +
+        'Thanks for doing your homework — every submission makes the club smarter.</div>' +
+        '<div class="confirm-actions">' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="dismissConfirm()">Submit another</button> ' +
+          '<a class="btn btn-ghost btn-sm" href="review.html">Go to the Review Desk →</a>' +
+        '</div>' +
+      '</div>';
+    panel.style.display = 'flex';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     document.getElementById('submit-status').textContent = `${ticker} submitted at ${new Date().toLocaleTimeString()}`;
   }
+
+  function dismissConfirm() {
+    const panel = document.getElementById('confirm-panel');
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    document.getElementById('f-ticker').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
 </script>
 </body>
 </html>
