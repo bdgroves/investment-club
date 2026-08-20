@@ -68,20 +68,24 @@
       </div>
       <div class="field">
         <label>Entry Target ($)</label>
+        <div class="hint">The price you'd ideally like to buy at.</div>
         <input type="text" id="f-entryTarget" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
       <div class="field">
         <label>Exit ($)</label>
+        <div class="hint">The price you'd plan to sell at.</div>
         <input type="text" id="f-exit" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
     </div>
     <div class="field-grid cols-2" style="margin-top:16px;">
       <div class="field">
         <label>Previous 1-Year High ($)</label>
+        <div class="hint">Highest price over the past year. (Auto-fills.)</div>
         <input type="text" id="f-high52" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
       <div class="field">
         <label>Previous 1-Year Low ($)</label>
+        <div class="hint">Lowest price over the past year. (Auto-fills.)</div>
         <input type="text" id="f-low52" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
     </div>
@@ -111,6 +115,7 @@
       </div>
       <div class="field">
         <label>Market Capitalization</label>
+        <div class="hint">The company's total size — Large, Mid, or Small.</div>
         <select id="f-marketCap">
           <option value="">Select…</option>
           <option>Large</option>
@@ -120,6 +125,7 @@
       </div>
       <div class="field">
         <label>Growth or Income?</label>
+        <div class="hint">Growth = you're betting the price rises. Income = you're mainly after the dividend.</div>
         <select id="f-growthIncome">
           <option value="">Select…</option>
           <option>Growth</option>
@@ -131,24 +137,29 @@
     <div class="field-grid cols-3" style="margin-top:16px;">
       <div class="field">
         <label>Beta (Mkt Volatility)</label>
+        <div class="hint">How jumpy the stock is vs. the market. 1.0 moves with it; above 1 swings more.</div>
         <input type="text" id="f-beta" class="num-input" inputmode="decimal" placeholder="1.00">
       </div>
       <div class="field">
         <label>P/E Ratio</label>
+        <div class="hint">Price-to-Earnings — how pricey the stock is vs. its profits. Higher = higher expectations built in.</div>
         <input type="text" id="f-peRatio" class="num-input" inputmode="decimal" placeholder="0.0">
       </div>
       <div class="field">
         <label>Price / Revenue per Share</label>
+        <div class="hint">Price vs. the company's sales — another gauge of how expensive it is.</div>
         <input type="text" id="f-priceRevShare" class="num-input" inputmode="decimal" placeholder="0.0">
       </div>
     </div>
     <div class="field-grid cols-3" style="margin-top:16px;">
       <div class="field">
         <label>Earnings per Share ($)</label>
+        <div class="hint">Company profit divided by number of shares.</div>
         <input type="text" id="f-eps" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
       <div class="field">
         <label>Dividend per Share ($)</label>
+        <div class="hint">Cash paid to shareholders per share each year (0 if none).</div>
         <input type="text" id="f-dividend" class="num-input" inputmode="decimal" placeholder="0.00">
       </div>
       <div class="field">
@@ -171,15 +182,18 @@
     <div class="field-grid">
       <div class="field">
         <label>Core Thesis</label>
+        <div class="hint">In plain words: what does the company do, and why will it do well? One or two sentences.</div>
         <textarea id="f-thesis" rows="3" placeholder="A strong thesis is a concise, 2–3 sentence argument that captures the investment opportunity and the nature of the company."></textarea>
         <p class="hint">2–3 sentences capturing the investment opportunity and the nature of the company.</p>
       </div>
       <div class="field">
         <label>Competitive Moat</label>
+        <div class="hint">The company's edge that keeps rivals from catching up — brand, scale, patents, a network, high switching costs.</div>
         <textarea id="f-moat" rows="3" placeholder="What structural advantages protect this company? Brand, network effects, cost structure, switching costs, IP, regulatory position..."></textarea>
       </div>
       <div class="field">
         <label>Why Now</label>
+        <div class="hint">Why buy now rather than later? A catalyst, a recent change, or good timing.</div>
         <textarea id="f-why-now" rows="3" placeholder="What's the catalyst or timing rationale? Earnings cycle, macro tailwind, management change, sector rotation, regulatory shift..."></textarea>
       </div>
     </div>
@@ -191,10 +205,12 @@
     <div class="field-grid cols-2">
       <div class="field">
         <label>Pros for This Trade</label>
+        <div class="hint">The bull case — the main reasons this could work out.</div>
         <textarea id="f-pros" rows="6" placeholder="List the key arguments in favor. Be specific and cite data where possible.&#10;&#10;— Revenue growth accelerating&#10;— Margin expansion thesis&#10;— Undervalued vs. peers at X multiple"></textarea>
       </div>
       <div class="field">
         <label>Cons for This Trade</label>
+        <div class="hint">The bear case — what could go wrong or what you're worried about.</div>
         <textarea id="f-cons" rows="6" placeholder="What could go wrong? What assumptions need to hold?&#10;&#10;— Key risk 1&#10;— Key risk 2&#10;— What would invalidate the thesis"></textarea>
       </div>
     </div>
@@ -206,6 +222,7 @@
     <div class="field-grid">
       <div class="field">
         <label>Think Through Every Possible Outcome</label>
+        <div class="hint">Your game plan: when would you buy more, hold, or sell? What would make you change your mind?</div>
         <textarea id="f-management" rows="8" placeholder="Think of every possible outcome for this trade and describe how you will manage the trade for each outcome.&#10;&#10;Bull scenario: If price reaches $X, I will...&#10;Base scenario: If price trades between $X–$Y, I will...&#10;Bear / stop-loss: If price falls to $X, I will exit because...&#10;Time stop: If the thesis isn't proven by [date], I will..."></textarea>
         <p class="hint">Describe how you will manage the trade for each outcome — no scenario should be "hope it goes up."</p>
       </div>
