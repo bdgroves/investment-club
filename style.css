@@ -588,3 +588,17 @@ select option { background: var(--slate2); }
   font-style: italic;
   opacity: .85;
 }
+
+/* "New to this?" guide link on the submission form */
+.guide-link {
+  font-size: .85rem;
+  margin: -6px 0 4px;
+  color: var(--mist, #8fa3b8);
+}
+.guide-link a {
+  color: var(--gold, #d4930a);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+}
+.guide-link a:hover { border-bottom-color: var(--gold, #d4930a); }
