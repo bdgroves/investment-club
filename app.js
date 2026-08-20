@@ -6,7 +6,7 @@
 */
 
 // ▼▼▼ APPS SCRIPT WEB APP URL (ends in /exec) — set = shared/sheet mode ▼▼▼
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzZVp5J2EIHKujh-qhpjECgmo1vKd2Dl8MiXAAavAJ5zSTLScb-QTGxYrkwarbih8qjQw/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxSCx_1YRrF4vLw9INbUUte7Utsxn5S-sXNpvxpnr6wScYF5ug1aocIqwl9ljYeNK-d9Q/exec';
 // ▲▲▲ set to '' to fall back to local prototype mode ▲▲▲
 
 /* ── Local cache (also the store when SHEET_URL is blank) ── */
@@ -140,6 +140,23 @@ function requestSynthesis(callback) {
     cleanup();
     callback({ error: 'Could not reach the synthesis service.' });
   };
+  document.head.appendChild(script);
+}
+
+/* ── Look up objective fundamentals for a ticker (JSONP; data API runs server-side) ── */
+function lookupTicker(ticker, callback) {
+  if (!SHEET_URL) { callback({ error: 'No backend configured.' }); return; }
+  const cbName = '__icLk_' + Date.now();
+  let script;
+  function cleanup() {
+    try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+  }
+  const timeout = setTimeout(function () { cleanup(); callback({ error: 'Lookup timed out.' }); }, 15000);
+  window[cbName] = function (data) { clearTimeout(timeout); cleanup(); callback(data || {}); };
+  script = document.createElement('script');
+  script.src = SHEET_URL + '?action=lookup&ticker=' + encodeURIComponent(ticker) + '&callback=' + cbName + '&t=' + Date.now();
+  script.onerror = function () { clearTimeout(timeout); cleanup(); callback({ error: 'Could not reach the lookup service.' }); };
   document.head.appendChild(script);
 }
 

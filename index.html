@@ -41,7 +41,11 @@
     <div class="field-grid cols-3" style="margin-top:16px;">
       <div class="field">
         <label>Symbol</label>
-        <input type="text" id="f-ticker" class="ticker-input" placeholder="AAPL" maxlength="8">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="f-ticker" class="ticker-input" placeholder="AAPL" maxlength="8" style="flex:1;">
+          <button type="button" class="btn btn-ghost btn-sm" id="lookup-btn" onclick="autoFill()" style="white-space:nowrap;">⤓ Auto-fill</button>
+        </div>
+        <div id="lookup-status" style="font-size:.72rem; color:var(--mist); margin-top:4px; min-height:1em;"></div>
       </div>
       <div class="field">
         <label>Exchange</label>
@@ -229,6 +233,53 @@
   ];
 
   function val(id) { return (document.getElementById(id).value || '').trim(); }
+
+  /* ── Auto-fill objective fundamentals from a ticker lookup ── */
+  function autoFill() {
+    const ticker = val('f-ticker').toUpperCase();
+    const btn = document.getElementById('lookup-btn');
+    const status = document.getElementById('lookup-status');
+    if (!ticker) { status.textContent = 'Enter a symbol first (e.g. Z for Zillow).'; return; }
+
+    btn.disabled = true;
+    status.style.color = 'var(--mist)';
+    status.textContent = 'Looking up ' + ticker + '…';
+
+    lookupTicker(ticker, function (data) {
+      btn.disabled = false;
+      if (!data || data.error) {
+        status.style.color = 'var(--red2)';
+        status.textContent = (data && data.error) ? data.error : 'Lookup failed — you can fill these in by hand.';
+        return;
+      }
+      // Only fill objective fields; never touch the thesis/discussion side.
+      const map = {
+        'f-stock': data.name, 'f-exchange': data.exchange, 'f-shareValue': data.price,
+        'f-high52': data.high52, 'f-low52': data.low52, 'f-sector': data.sector,
+        'f-marketCap': data.marketCap, 'f-beta': data.beta, 'f-peRatio': data.peRatio,
+        'f-priceRevShare': data.priceRevShare, 'f-eps': data.eps,
+        'f-dividend': data.dividend, 'f-dividendFreq': data.dividendFreq
+      };
+      let filled = 0;
+      Object.keys(map).forEach(function (id) {
+        const el = document.getElementById(id);
+        const v = map[id];
+        if (!el || v === undefined || v === null || v === '') return;
+        if (el.tagName === 'SELECT') {
+          // match option case-insensitively; skip if no match
+          const opt = Array.prototype.find.call(el.options, function (o) {
+            return o.value.toLowerCase() === String(v).toLowerCase();
+          });
+          if (opt) { el.value = opt.value; filled++; }
+        } else {
+          el.value = v; filled++;
+        }
+      });
+      status.style.color = 'var(--sage, #6b8f71)';
+      status.textContent = '✓ Filled ' + filled + ' fields from market data (' + (data.asOf || 'latest') +
+        '). Review them, then write your thesis below.';
+    });
+  }
 
   function submitTrade() {
     const ticker = val('f-ticker').toUpperCase();
