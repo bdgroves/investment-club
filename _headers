@@ -1,0 +1,22 @@
+# Always serve the freshest code to every visitor.
+# HTML/JS/CSS are small here, so we tell browsers to re-check with the
+# server on each load instead of clinging to a cached copy. This prevents
+# the "stale app.js on one computer" problem when the club is on many devices.
+
+/*
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/review.html
+  Cache-Control: no-cache, must-revalidate
+
+/guide.html
+  Cache-Control: no-cache, must-revalidate
+
+/app.js
+  Cache-Control: no-cache, must-revalidate
+
+/style.css
+  Cache-Control: no-cache, must-revalidate

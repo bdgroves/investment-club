@@ -1,0 +1,18 @@
+# Backup of the _headers rules, in Netlify's config format.
+# Either file works on its own; having both makes the cache behavior
+# robust regardless of how the site is deployed.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/app.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/style.css"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
