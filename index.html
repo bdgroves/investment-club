@@ -181,7 +181,11 @@
 
   <!-- Block 4: Thesis -->
   <div class="form-block">
-    <div class="form-block-title">Investment Thesis</div>
+    <div class="form-block-title with-action">
+      <span>Investment Thesis</span>
+      <button type="button" class="btn btn-ghost btn-sm starter-btn" id="starter-btn" onclick="getStarterQuestions()">✎ Help me get started</button>
+    </div>
+    <div id="starter-panel" class="starter-panel" style="display:none;"></div>
     <div class="field-grid">
       <div class="field">
         <label>Core Thesis</label>
@@ -299,6 +303,55 @@
       status.textContent = '✓ Filled ' + filled + ' fields from market data (' + (data.asOf || 'latest') +
         '). Review them, then write your thesis below.';
     });
+  }
+
+  /* ── "Help me get started": AI asks questions, the member writes the answers ── */
+  function getStarterQuestions() {
+    const ticker = val('f-ticker').toUpperCase();
+    const name = val('f-stock');
+    const btn = document.getElementById('starter-btn');
+    const panel = document.getElementById('starter-panel');
+
+    if (!ticker) {
+      panel.style.display = 'block';
+      panel.innerHTML = '<div class="starter-note">Enter a stock symbol above first, then click this again.</div>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Thinking\u2026';
+    panel.style.display = 'block';
+    panel.innerHTML = '<div class="starter-note">Coming up with questions about ' + esc(ticker) + '\u2026</div>';
+
+    starterQuestions(ticker, name, function (data) {
+      btn.disabled = false;
+      btn.textContent = '\u270E Help me get started';
+
+      if (!data || data.error || !data.questions || !data.questions.length) {
+        panel.innerHTML = '<div class="starter-note">' +
+          ((data && data.error) ? esc(data.error) : 'Couldn\u2019t load questions just now \u2014 go ahead and write in your own words.') +
+          '</div>';
+        return;
+      }
+
+      let html = '<div class="starter-head">Questions to get you started on ' + esc(ticker) + '</div>' +
+        '<div class="starter-sub">Answer these in your own words and you\u2019ll have most of a thesis. These are prompts, not answers \u2014 the thinking is yours.</div><ol class="starter-list">';
+      data.questions.forEach(function (q) { html += '<li>' + esc(q) + '</li>'; });
+      html += '</ol><button type="button" class="btn btn-ghost btn-sm" onclick="hideStarter()">Hide these</button>';
+      panel.innerHTML = html;
+    });
+  }
+
+  function hideStarter() {
+    const panel = document.getElementById('starter-panel');
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+  }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function submitTrade() {

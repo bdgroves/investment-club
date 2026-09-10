@@ -61,6 +61,10 @@ function doGet(e) {
     return reply(lookupTicker((e.parameter.ticker || '').toUpperCase()), e);
   }
 
+  if (action === 'starter') {
+    return reply(starterQuestions((e.parameter.ticker || '').toUpperCase(), e.parameter.name || ''), e);
+  }
+
   // Writes routed through GET (JSONP) because browser no-cors POST
   // won't follow Apps Script's redirect. Payload arrives as ?data=<json>.
   if (action === 'submit' || action === 'decision') {
@@ -313,6 +317,79 @@ function lookupTicker(ticker) {
     };
   } catch (err) {
     return { error: 'Lookup error: ' + String(err) };
+  }
+}
+
+/* ---------- "Help me get started": generate questions, never answers ---------- */
+function starterQuestions(ticker, name) {
+  try {
+    if (!ticker) return { error: 'No ticker provided.' };
+    const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+    if (!key) return { error: 'Question helper is not set up yet — go ahead and write in your own words.' };
+
+    const cache = CacheService.getScriptCache();
+    const cacheKey = 'starter_' + ticker;
+    const hit = cache.get(cacheKey);
+    if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+
+    const who = name ? (name + ' (' + ticker + ')') : ticker;
+
+    const payload = {
+      model: SYNTH_MODEL,
+      max_tokens: 700,
+      system: 'You help members of a volunteer investment club write their own investment thesis. ' +
+        'Your job is to ASK QUESTIONS ONLY. You never answer them, never state a view about the company, ' +
+        'never say whether it is a good or bad investment, and never suggest buying, selling, or holding. ' +
+        'The member does the thinking; you only help them find the right things to think about. ' +
+        'Write for a smart adult who is not a finance professional: plain language, no jargon, no acronyms without explanation. ' +
+        'Each question must be answerable by someone willing to spend twenty minutes reading about the company.',
+      messages: [{
+        role: 'user',
+        content: 'A club member is writing up ' + who + ' for our trade journal. They need to fill in: ' +
+          'Core Thesis (what the company does and why it will do well), Competitive Moat (its edge over rivals), ' +
+          'Why Now (the timing), Pros and Cons, and Trade Management (their own plan for when to buy more, hold, or sell).\n\n' +
+          'Give me 6 short questions, specific to this company, that would help them fill those sections in their own words. ' +
+          'Cover the business itself, its competition, the timing, the main risk, and — for trade management — one question ' +
+          'that asks THEM what would make them change their mind or sell.\n\n' +
+          'Rules: questions only, no answers, no opinions about the company, no buy/sell language. ' +
+          'One sentence each. Return ONLY a JSON array of 6 strings, nothing else — no preamble, no markdown fences.'
+      }]
+    };
+
+    const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) {
+      return { error: 'Couldn\u2019t load questions just now — go ahead and write in your own words.' };
+    }
+
+    const body = JSON.parse(res.getContentText());
+    let text = (body.content || []).map(function (b) { return b.text || ''; }).join('').trim();
+    text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+
+    let questions;
+    try {
+      questions = JSON.parse(text);
+    } catch (e) {
+      // fall back: split lines, strip bullets/numbering
+      questions = text.split('\n').map(function (l) {
+        return l.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s*/, '').replace(/^"|"$/g, '').trim();
+      }).filter(function (l) { return l.length > 10; });
+    }
+    if (!Array.isArray(questions) || !questions.length) {
+      return { error: 'Couldn\u2019t load questions just now — go ahead and write in your own words.' };
+    }
+
+    const out = { questions: questions.slice(0, 6) };
+    cache.put(cacheKey, JSON.stringify(out), 21600); // 6h — same ticker, same questions
+    return out;
+  } catch (err) {
+    return { error: 'Question helper hit a snag — go ahead and write in your own words.' };
   }
 }
 
