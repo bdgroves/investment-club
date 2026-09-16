@@ -84,6 +84,18 @@
       </div>
     </div>
 
+    <!-- Pre-meeting digest -->
+    <div class="synthesis-panel">
+      <div class="synthesis-header">
+        <div>
+          <h3>✉ Pre-meeting digest</h3>
+          <p style="font-size:.78rem; color:var(--mist); margin-top:3px;">Emails the pending Trade Journals to you, formatted and ready to forward to the club.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="digest-btn" onclick="emailDigest()">Send me the digest</button>
+      </div>
+      <div id="digest-status" style="font-size:.84rem; color:var(--mist); margin-top:10px; min-height:1em;"></div>
+    </div>
+
     <!-- Filters -->
     <div class="filter-row">
       <button class="pill active" onclick="setFilter('all', this)">All</button>
@@ -342,6 +354,29 @@
       }
       btn.disabled = false;
       btn.textContent = 'Re-synthesize';
+    });
+  }
+
+  /* ── Pre-meeting digest ── */
+  function emailDigest() {
+    const btn = document.getElementById('digest-btn');
+    const status = document.getElementById('digest-status');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    status.style.color = 'var(--mist)';
+    status.textContent = 'Building the digest…';
+
+    requestDigest(function (data) {
+      btn.disabled = false;
+      btn.textContent = 'Send me the digest';
+      if (!data || data.error) {
+        status.style.color = 'var(--red2)';
+        status.textContent = (data && data.error) ? data.error : 'Could not send the digest.';
+        return;
+      }
+      status.style.color = '#35c88a';
+      status.textContent = '✓ Sent ' + data.sent + ' Trade Journal' + (data.sent === 1 ? '' : 's') +
+        ' to ' + data.to + '. Check your inbox, then forward it on.';
     });
   }
 

@@ -44,7 +44,9 @@ const FIELDS = [
   { key: 'cons',          header: 'Cons' },
   { key: 'management',    header: 'Management' },
   { key: 'status',        header: 'Status' },
-  { key: 'notes',         header: 'Notes' }
+  { key: 'notes',         header: 'Notes' },
+  { key: 'whyPicked',     header: 'How It Landed On Radar' },
+  { key: 'dataSource',    header: 'Data Source' }
 ];
 
 const HEADERS = FIELDS.map(function (f) { return f.header; });
@@ -63,6 +65,10 @@ function doGet(e) {
 
   if (action === 'starter') {
     return reply(starterQuestions((e.parameter.ticker || '').toUpperCase(), e.parameter.name || ''), e);
+  }
+
+  if (action === 'digest') {
+    return reply(sendDigest(), e);
   }
 
   // Writes routed through GET (JSONP) because browser no-cors POST
@@ -154,6 +160,16 @@ function getSheet() {
     sheet.setColumnWidth(1, 160);
     sheet.setColumnWidth(HEADERS.indexOf('Thesis') + 1, 320);
     sheet.setColumnWidth(HEADERS.indexOf('Management') + 1, 320);
+  } else {
+    // Schema may have grown since this sheet was created. Add any missing
+    // header cells so existing columns keep their positions and data.
+    const width = sheet.getLastColumn();
+    if (width < HEADERS.length) {
+      const missing = HEADERS.slice(width);
+      const rng = sheet.getRange(1, width + 1, 1, missing.length);
+      rng.setValues([missing]);
+      rng.setBackground('#1d2535').setFontColor('#f0b534').setFontWeight('bold');
+    }
   }
   return sheet;
 }
@@ -192,6 +208,7 @@ function synthesize() {
         'SECTOR: ' + t.sector + ' | CAP: ' + t.marketCap + ' | STYLE: ' + t.growthIncome,
         'PRICE: ' + t.shareValue + ' | ENTRY: ' + t.entryTarget + ' | EXIT: ' + t.exit + ' | 52WK: ' + t.low52 + '-' + t.high52,
         'VALUATION: Beta ' + t.beta + ', P/E ' + t.peRatio + ', P/Rev ' + t.priceRevShare + ', EPS ' + t.eps + ', Div ' + t.dividend + ' (' + t.dividendFreq + ')',
+        'HOW IT LANDED ON THEIR RADAR: ' + (t.whyPicked || 'not given'),
         'THESIS: ' + t.thesis,
         'MOAT: ' + t.moat,
         'WHY NOW: ' + t.whyNow,
@@ -313,6 +330,7 @@ function lookupTicker(ticker) {
       eps: num(eps),
       dividend: div ? num(div) : '0',
       dividendFreq: (div && div > 0) ? 'Quarterly' : 'None',
+      source: 'Finnhub market data',
       asOf: new Date().toISOString().slice(0, 10)
     };
   } catch (err) {
@@ -391,6 +409,120 @@ function starterQuestions(ticker, name) {
   } catch (err) {
     return { error: 'Question helper hit a snag — go ahead and write in your own words.' };
   }
+}
+
+/* ---------- Pre-meeting digest: email the pending Trade Journals ---------- */
+// NOTE: the recipient is NEVER taken from the URL. It comes from the DIGEST_TO
+// script property, falling back to the script owner. A public endpoint that
+// accepted a "to" parameter would be an open mail relay.
+function sendDigest() {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get('digest_lock')) {
+      return { error: 'A digest just went out — give it a minute before sending another.' };
+    }
+
+    const sheet = getSheet();
+    const rows = sheet.getDataRange().getValues();
+    if (rows.length <= 1) return { error: 'There are no submissions to send yet.' };
+
+    const all = rows.slice(1).map(function (row) {
+      const o = {};
+      FIELDS.forEach(function (f, i) { o[f.key] = row[i]; });
+      return o;
+    });
+    const trades = all.filter(function (t) {
+      return String(t.status || 'pending').toLowerCase() === 'pending' && String(t.ticker || '').trim();
+    });
+    if (!trades.length) return { error: 'No pending Trade Journals to send right now.' };
+
+    let to = PropertiesService.getScriptProperties().getProperty('DIGEST_TO');
+    if (!to) { to = Session.getEffectiveUser().getEmail(); }
+    if (!to) return { error: 'No recipient set. Add a DIGEST_TO script property.' };
+
+    const tickers = trades.map(function (t) { return t.ticker; }).join(', ');
+    const subject = 'LIC Trade Journals for the next meeting — ' + tickers;
+
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      htmlBody: buildDigestHtml(trades),
+      name: 'Lakewood Investors Club'
+    });
+
+    cache.put('digest_lock', '1', 60);
+    return { ok: true, sent: trades.length, to: to };
+  } catch (err) {
+    return { error: 'Could not send: ' + String(err) };
+  }
+}
+
+// Written to be forwarded as-is — it reads as a note to members, not to the sender.
+function buildDigestHtml(trades) {
+  const A = '#b8860b', INK = '#1f2733', SOFT = '#5b6674', LINE = '#e2ddd4';
+  let h = '<div style="font-family:Georgia,serif;color:' + INK + ';max-width:680px;line-height:1.55;">';
+  h += '<p style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:' + A + ';font-weight:bold;margin:0 0 4px;">Lakewood Investors Club</p>';
+  h += '<h2 style="font-family:Arial,sans-serif;margin:0 0 10px;font-size:20px;">Trade Journals for the next meeting</h2>';
+  h += '<p style="margin:0 0 6px;">Here ' + (trades.length === 1 ? 'is the Trade Journal' : 'are the ' + trades.length + ' Trade Journals') +
+       ' submitted so far. Please have a read before we meet and come with your thoughts \u2014 the point of the meeting is to flesh these out together.</p>';
+  h += '<p style="margin:0 0 18px;color:' + SOFT + ';font-size:14px;">You can also view them, and add one of your own, at <a href="https://lakewood-investment-club.netlify.app/" style="color:' + A + ';">lakewood-investment-club.netlify.app</a>.</p>';
+
+  trades.forEach(function (t) {
+    h += '<div style="border:1px solid ' + LINE + ';border-radius:8px;padding:16px 18px;margin:0 0 18px;">';
+    h += '<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:bold;margin-bottom:2px;">' +
+         esc_(t.ticker) + (t.stock ? ' \u2014 ' + esc_(t.stock) : '') + '</div>';
+    h += '<div style="color:' + SOFT + ';font-size:13px;margin-bottom:12px;">Submitted by ' + esc_(t.member || 'a member') +
+         (t.date ? ' \u00b7 ' + esc_(fmtDate_(t.date)) : '') + '</div>';
+
+    const nums = [];
+    if (t.shareValue) nums.push('Price ' + esc_(t.shareValue));
+    if (t.entryTarget) nums.push('Entry ' + esc_(t.entryTarget));
+    if (t.exit) nums.push('Exit ' + esc_(t.exit));
+    if (t.peRatio) nums.push('P/E ' + esc_(t.peRatio));
+    if (t.beta) nums.push('Beta ' + esc_(t.beta));
+    if (t.eps) nums.push('EPS ' + esc_(t.eps));
+    if (t.dividend) nums.push('Div ' + esc_(t.dividend));
+    if (t.sector) nums.push(esc_(t.sector));
+    if (nums.length) {
+      h += '<div style="background:#f7f5f0;border-radius:5px;padding:9px 12px;font-family:Arial,sans-serif;font-size:12px;color:' +
+           SOFT + ';margin-bottom:14px;">' + nums.join(' &nbsp;\u00b7&nbsp; ') + '</div>';
+    }
+
+    h += section_('How it landed on their radar', t.whyPicked, A, SOFT);
+    h += section_('Core thesis', t.thesis, A, SOFT);
+    h += section_('Competitive moat', t.moat, A, SOFT);
+    h += section_('Why now', t.whyNow, A, SOFT);
+    h += section_('Pros', t.pros, A, SOFT);
+    h += section_('Cons', t.cons, A, SOFT);
+    h += section_('Trade management', t.management, A, SOFT);
+    h += '</div>';
+  });
+
+  h += '<p style="color:' + SOFT + ';font-size:12px;border-top:1px solid ' + LINE + ';padding-top:12px;margin-top:20px;">' +
+       'Numbers were auto-filled from market data at the time of submission and may have moved since. Shared for club discussion. Not investment advice \u2014 every member does their own research and the club decides together.</p>';
+  h += '</div>';
+  return h;
+}
+
+function section_(label, value, A, SOFT) {
+  const v = String(value === undefined || value === null ? '' : value).trim();
+  if (!v) return '';
+  return '<div style="margin-bottom:11px;">' +
+    '<div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:' + A + ';font-weight:bold;margin-bottom:2px;">' + label + '</div>' +
+    '<div style="font-size:14px;">' + esc_(v).replace(/\n/g, '<br>') + '</div></div>';
+}
+
+function esc_(s) {
+  return String(s === undefined || s === null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtDate_(d) {
+  try {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(dt.getTime())) return String(d);
+    return Utilities.formatDate(dt, Session.getScriptTimeZone(), 'MMM d, yyyy');
+  } catch (e) { return String(d); }
 }
 
 // Map a market-data industry string to the form's Sector dropdown options

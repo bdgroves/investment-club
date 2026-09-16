@@ -160,6 +160,23 @@ function lookupTicker(ticker, callback) {
   document.head.appendChild(script);
 }
 
+/* ── Pre-meeting digest: server emails the pending journals to the configured address ── */
+function requestDigest(callback) {
+  if (!SHEET_URL) { callback({ error: 'No backend configured.' }); return; }
+  const cbName = '__icDg_' + Date.now();
+  let script;
+  function cleanup() {
+    try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+  }
+  const timeout = setTimeout(function () { cleanup(); callback({ error: 'That took too long — check your inbox before retrying.' }); }, 30000);
+  window[cbName] = function (data) { clearTimeout(timeout); cleanup(); callback(data || {}); };
+  script = document.createElement('script');
+  script.src = SHEET_URL + '?action=digest&callback=' + cbName + '&t=' + Date.now();
+  script.onerror = function () { clearTimeout(timeout); cleanup(); callback({ error: 'Could not reach the mail service.' }); };
+  document.head.appendChild(script);
+}
+
 /* ── Starter questions: AI asks, the member answers (never fills the fields) ── */
 function starterQuestions(ticker, name, callback) {
   if (!SHEET_URL) { callback({ error: 'No backend configured.' }); return; }

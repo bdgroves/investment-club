@@ -31,7 +31,16 @@
   <!-- Block 1: Identification -->
   <div class="form-block">
     <div class="form-block-title">Trade Identification</div>
-    <div class="field-grid cols-2">
+    <div class="field start-here">
+      <label>Symbol <span class="start-tag">start here</span></label>
+      <div class="hint">Enter the ticker and hit Auto-fill — the numbers below fill themselves in.</div>
+      <div style="display:flex; gap:8px; align-items:center; max-width:420px;">
+        <input type="text" id="f-ticker" class="ticker-input" placeholder="AAPL" maxlength="8" style="flex:1;">
+        <button type="button" class="btn btn-ghost btn-sm" id="lookup-btn" onclick="autoFill()" style="white-space:nowrap;">⤓ Auto-fill</button>
+      </div>
+      <div id="lookup-status" style="font-size:.72rem; color:var(--mist); margin-top:4px; min-height:1em;"></div>
+    </div>
+    <div class="field-grid cols-2" style="margin-top:16px;">
       <div class="field">
         <label>Stock / Company Name</label>
         <input type="text" id="f-stock" placeholder="Apple Inc.">
@@ -41,15 +50,7 @@
         <input type="date" id="f-date">
       </div>
     </div>
-    <div class="field-grid cols-3" style="margin-top:16px;">
-      <div class="field">
-        <label>Symbol</label>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input type="text" id="f-ticker" class="ticker-input" placeholder="AAPL" maxlength="8" style="flex:1;">
-          <button type="button" class="btn btn-ghost btn-sm" id="lookup-btn" onclick="autoFill()" style="white-space:nowrap;">⤓ Auto-fill</button>
-        </div>
-        <div id="lookup-status" style="font-size:.72rem; color:var(--mist); margin-top:4px; min-height:1em;"></div>
-      </div>
+    <div class="field-grid cols-2" style="margin-top:16px;">
       <div class="field">
         <label>Exchange</label>
         <input type="text" id="f-exchange" class="num-input" placeholder="NASDAQ">
@@ -97,6 +98,7 @@
   <!-- Block 3: Company Fundamentals -->
   <div class="form-block">
     <div class="form-block-title">Company Fundamentals</div>
+    <div id="source-stamp" class="source-stamp" style="display:none;"></div>
     <div class="field-grid cols-3">
       <div class="field">
         <label>Sector Category</label>
@@ -188,6 +190,11 @@
     <div id="starter-panel" class="starter-panel" style="display:none;"></div>
     <div class="field-grid">
       <div class="field">
+        <label>How did this one land on your radar? <span class="optional-tag">optional</span></label>
+        <div class="hint">Not the market case — just how you came across it. A podcast, a product you use, something a friend keeps mentioning, a story in the news. Often the most interesting line in a submission.</div>
+        <textarea id="f-whyPicked" rows="2" placeholder="e.g. My daughter works in a data center and said they can't get enough of these."></textarea>
+      </div>
+      <div class="field">
         <label>Core Thesis</label>
         <div class="hint">In plain words: what does the company do, and why will it do well? One or two sentences.</div>
         <textarea id="f-thesis" rows="3" placeholder="A strong thesis is a concise, 2–3 sentence argument that captures the investment opportunity and the nature of the company."></textarea>
@@ -253,12 +260,14 @@
     'f-shareValue','f-entryTarget','f-exit','f-high52','f-low52',
     'f-sector','f-marketCap','f-growthIncome','f-beta','f-peRatio',
     'f-priceRevShare','f-eps','f-dividend','f-dividendFreq',
-    'f-thesis','f-moat','f-why-now','f-pros','f-cons','f-management'
+    'f-whyPicked','f-thesis','f-moat','f-why-now','f-pros','f-cons','f-management'
   ];
 
   function val(id) { return (document.getElementById(id).value || '').trim(); }
 
   /* ── Auto-fill objective fundamentals from a ticker lookup ── */
+  let lastFillSource = '';
+
   function autoFill() {
     const ticker = val('f-ticker').toUpperCase();
     const btn = document.getElementById('lookup-btn');
@@ -299,9 +308,16 @@
           el.value = v; filled++;
         }
       });
+      const src = data.source || 'Finnhub market data';
+      const asOf = data.asOf || 'latest';
+      lastFillSource = src + ', as of ' + asOf;
       status.style.color = 'var(--sage, #6b8f71)';
-      status.textContent = '✓ Filled ' + filled + ' fields from market data (' + (data.asOf || 'latest') +
-        '). Review them, then write your thesis below.';
+      status.textContent = '✓ Filled ' + filled + ' fields. Review them, then write your thesis below.';
+      const stamp = document.getElementById('source-stamp');
+      if (stamp) {
+        stamp.textContent = 'Auto-filled from ' + src + ' · as of ' + asOf + ' · worth a quick sanity-check before you submit';
+        stamp.style.display = 'block';
+      }
     });
   }
 
@@ -389,7 +405,9 @@
       whyNow:        val('f-why-now'),
       pros:          val('f-pros'),
       cons:          val('f-cons'),
-      management:    val('f-management')
+      management:    val('f-management'),
+      whyPicked:     val('f-whyPicked'),
+      dataSource:    lastFillSource
     };
 
     saveTrade(trade);

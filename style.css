@@ -685,3 +685,43 @@ select option { background: var(--slate2); }
   color: var(--mist, #8fa3b8);
   font-style: italic;
 }
+
+/* "Start here" ticker field, optional tags, and data-source provenance */
+.start-here {
+  background: rgba(212,147,10,0.06);
+  border: 1px solid rgba(212,147,10,0.28);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.start-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: .6rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold, #d4930a);
+  border: 1px solid rgba(212,147,10,0.5);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.optional-tag {
+  font-family: system-ui, sans-serif;
+  font-size: .68rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--mist, #8fa3b8);
+  margin-left: 6px;
+  opacity: .8;
+}
+.source-stamp {
+  font-size: .72rem;
+  color: var(--mist, #8fa3b8);
+  font-style: italic;
+  margin: -12px 0 16px;
+  padding: 6px 10px;
+  background: rgba(143,163,184,0.07);
+  border-left: 2px solid rgba(143,163,184,0.35);
+  border-radius: 3px;
+}
