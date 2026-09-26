@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Investment Club — Submit a Trade</title>
   <link rel="stylesheet" href="style.css">
+<script>try{if(localStorage.getItem('ic_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 </head>
 <body>
 
@@ -17,6 +18,7 @@
   <div class="topbar-nav">
     <a href="index.html" class="active">Submit</a>
     <a href="review.html">Review Desk</a>
+    <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch colour theme">☾ Dark</button>
   </div>
 </nav>
 
@@ -311,7 +313,7 @@
       const src = data.source || 'Finnhub market data';
       const asOf = data.asOf || 'latest';
       lastFillSource = src + ', as of ' + asOf;
-      status.style.color = 'var(--sage, #6b8f71)';
+      status.style.color = 'var(--green2)';
       status.textContent = '✓ Filled ' + filled + ' fields. Review them, then write your thesis below.';
       const stamp = document.getElementById('source-stamp');
       if (stamp) {

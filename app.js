@@ -205,3 +205,21 @@ function showToast(msg, isError) {
   el.classList.add('show');
   setTimeout(function () { el.classList.remove('show'); }, 3200);
 }
+
+
+/* ── Light / dark theme (light is the default; choice remembered per browser) ── */
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+function setThemeLabel() {
+  var b = document.getElementById('theme-toggle');
+  if (b) b.textContent = currentTheme() === 'dark' ? '\u2600 Light' : '\u263e Dark';
+}
+function toggleTheme() {
+  var next = currentTheme() === 'dark' ? 'light' : 'dark';
+  if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem('ic_theme', next); } catch (e) {}
+  setThemeLabel();
+}
+document.addEventListener('DOMContentLoaded', setThemeLabel);

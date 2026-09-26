@@ -1,26 +1,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
-/* ── Tokens ── */
+/* ── Tokens ──
+   Light is the default: high contrast, easier on older eyes.
+   Dark stays available via the toggle in the top bar (data-theme="dark"). */
 :root {
+  --slate:      #f4f6f9;   /* page background   */
+  --slate2:     #ffffff;   /* cards, top bar    */
+  --slate3:     #eef1f5;   /* raised / hover    */
+  --slate4:     #e1e6ec;
+  --steel:      #5f6d7b;   /* borders, dim text */
+  --mist:       #44525f;   /* secondary text    */
+  --fog:        #1f2a36;   /* body text         */
+  --white:      #0f1720;   /* headings, strongest text */
+  --amber:      #9a6300;
+  --amber2:     #8a5800;
+  --green:      #1a7a50;
+  --green2:     #16704a;
+  --red:        #a82d2d;
+  --red2:       #b02a2a;
+  --blue:       #1d5aa6;
+  --blue2:      #1d5aa6;
+  --border:     rgba(31,42,54,0.18);
+  --border-hi:  rgba(154,99,0,0.40);
+  --input-bg:   #ffffff;
+  --on-amber:   #ffffff;
+  --check-ink:  #ffffff;
+  --field-bg:   #ffffff;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
   --slate:      #0e1117;
   --slate2:     #161c26;
   --slate3:     #1d2535;
   --slate4:     #26303f;
-  --steel:      #3a4a5c;
-  --mist:       #8fa3b8;
-  --fog:        #c5d3df;
-  --white:      #eef2f6;
+  --steel:      #5b6c80;
+  --mist:       #a3b4c6;
+  --fog:        #d3dde7;
+  --white:      #f2f5f8;
   --amber:      #d4930a;
   --amber2:     #f0b534;
   --green:      #1f8c5e;
   --green2:     #2db87d;
   --red:        #a82d2d;
-  --red2:       #d96060;
+  --red2:       #e07070;
   --blue:       #2a6fc9;
   --blue2:      #5594e8;
-  --border:     rgba(58,74,92,0.6);
+  --border:     rgba(90,108,128,0.55);
   --border-hi:  rgba(212,147,10,0.35);
+  --input-bg:   rgba(0,0,0,0.25);
+  --on-amber:   #0e1117;
+  --check-ink:  #0e1117;
+  --field-bg:   #1d2535;
+  color-scheme: dark;
 }
+
+/* Bigger base text: every size below is in rem, so this scales the whole app. */
+html { font-size: 18px; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -87,7 +122,7 @@ body {
 /* ── Section heading ── */
 .section-eyebrow {
   font-family: 'Space Mono', monospace;
-  font-size: .65rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -119,7 +154,7 @@ body {
 }
 .form-block-title {
   font-family: 'Space Mono', monospace;
-  font-size: .68rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -138,7 +173,7 @@ body {
 
 .field label {
   display: block;
-  font-size: .7rem;
+  font-size: .72rem;
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -146,8 +181,8 @@ body {
   margin-bottom: 7px;
 }
 .field .hint {
-  font-size: .75rem;
-  color: var(--steel);
+  font-size: .8rem;
+  color: var(--mist);
   margin-top: 5px;
   line-height: 1.4;
 }
@@ -158,7 +193,7 @@ input[type="password"],
 select,
 textarea {
   width: 100%;
-  background: var(--slate3);
+  background: var(--field-bg);
   border: 1px solid var(--steel);
   border-radius: 4px;
   color: var(--white);
@@ -197,7 +232,7 @@ select option { background: var(--slate2); }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
-  background: var(--border);
+  background: var(--slate4);
   border: 1px solid var(--border);
   border-radius: 5px;
   overflow: hidden;
@@ -209,7 +244,7 @@ select option { background: var(--slate2); }
 }
 .fund-cell .fk {
   display: block;
-  font-size: .58rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -242,7 +277,7 @@ select option { background: var(--slate2); }
   cursor: pointer;
   transition: all .18s;
 }
-.btn-primary { background: var(--amber); color: var(--slate); }
+.btn-primary { background: var(--amber); color: var(--on-amber); }
 .btn-primary:hover { background: var(--amber2); }
 .btn-ghost {
   background: none;
@@ -256,7 +291,7 @@ select option { background: var(--slate2); }
 .badge {
   display: inline-block;
   font-family: 'Space Mono', monospace;
-  font-size: .62rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -343,7 +378,7 @@ select option { background: var(--slate2); }
   color: var(--white);
   line-height: 1;
 }
-.stat-label { font-size: .68rem; color: var(--mist); letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
+.stat-label { font-size: .72rem; color: var(--mist); letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
 
 /* ── Filter pills ── */
 .filter-row {
@@ -479,7 +514,7 @@ select option { background: var(--slate2); }
   margin-bottom: 16px;
 }
 .detail-item h4 {
-  font-size: .65rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -504,12 +539,12 @@ select option { background: var(--slate2); }
 }
 .pros-box { background: rgba(31,140,94,0.08); border: 1px solid rgba(31,140,94,0.25); }
 .cons-box { background: rgba(168,45,45,0.08); border: 1px solid rgba(168,45,45,0.25); }
-.pros-box h4 { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--green2); margin-bottom: 6px; }
-.cons-box h4 { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--red2);   margin-bottom: 6px; }
+.pros-box h4 { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--green2); margin-bottom: 6px; }
+.cons-box h4 { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--red2);   margin-bottom: 6px; }
 .pros-box p, .cons-box p { font-size: .83rem; line-height: 1.6; color: var(--fog); }
 
 .full-detail { margin-bottom: 14px; }
-.full-detail h4 { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mist); margin-bottom: 5px; }
+.full-detail h4 { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mist); margin-bottom: 5px; }
 .full-detail p  { font-size: .84rem; line-height: 1.6; color: var(--fog); }
 
 /* ── Decision bar ── */
@@ -518,12 +553,12 @@ select option { background: var(--slate2); }
   align-items: center;
   gap: 10px;
   padding: 13px 22px;
-  background: rgba(0,0,0,0.25);
+  background: var(--input-bg);
   border-top: 1px solid var(--border);
   flex-wrap: wrap;
 }
 .decision-label {
-  font-size: .68rem;
+  font-size: .72rem;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -581,12 +616,11 @@ select option { background: var(--slate2); }
 
 /* Plain-English field hints (for members newer to the jargon) */
 .field .hint {
-  font-size: .72rem;
-  line-height: 1.35;
+  font-size: .8rem;
+  line-height: 1.4;
   color: var(--mist, #8fa3b8);
   margin: 3px 0 6px;
   font-style: italic;
-  opacity: .85;
 }
 
 /* "New to this?" guide link on the submission form */
@@ -596,12 +630,12 @@ select option { background: var(--slate2); }
   color: var(--mist, #8fa3b8);
 }
 .guide-link a {
-  color: var(--gold, #d4930a);
+  color: var(--amber);
   text-decoration: none;
   font-weight: 600;
   border-bottom: 1px solid transparent;
 }
-.guide-link a:hover { border-bottom-color: var(--gold, #d4930a); }
+.guide-link a:hover { border-bottom-color: var(--amber); }
 
 /* Warm confirmation panel after a submission lands */
 .confirm-panel {
@@ -618,8 +652,8 @@ select option { background: var(--slate2); }
   flex: none;
   width: 40px; height: 40px;
   border-radius: 50%;
-  background: #2db87d;
-  color: #0e1117;
+  background: var(--green2);
+  color: var(--check-ink);
   font-size: 1.4rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
@@ -627,11 +661,11 @@ select option { background: var(--slate2); }
   font-family: system-ui, sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
-  color: #35c88a;
+  color: var(--green2);
   margin-bottom: 4px;
 }
 .confirm-text {
-  color: var(--cloud, #c5d3df);
+  color: var(--fog);
   font-size: .92rem;
   line-height: 1.5;
 }
@@ -675,7 +709,7 @@ select option { background: var(--slate2); }
 .starter-list {
   margin: 0 0 12px;
   padding-left: 20px;
-  color: var(--cloud, #c5d3df);
+  color: var(--fog);
   font-size: .9rem;
   line-height: 1.5;
 }
@@ -695,10 +729,10 @@ select option { background: var(--slate2); }
 }
 .start-tag {
   font-family: 'Space Mono', monospace;
-  font-size: .6rem;
+  font-size: .72rem;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--gold, #d4930a);
+  color: var(--amber);
   border: 1px solid rgba(212,147,10,0.5);
   border-radius: 3px;
   padding: 1px 6px;
@@ -707,7 +741,7 @@ select option { background: var(--slate2); }
 }
 .optional-tag {
   font-family: system-ui, sans-serif;
-  font-size: .68rem;
+  font-size: .72rem;
   font-weight: 400;
   letter-spacing: normal;
   text-transform: none;
@@ -725,3 +759,21 @@ select option { background: var(--slate2); }
   border-left: 2px solid rgba(143,163,184,0.35);
   border-radius: 3px;
 }
+
+
+/* Light / dark toggle in the top bar */
+.theme-toggle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--mist);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  margin-left: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.theme-toggle:hover { color: var(--white); border-color: var(--steel); }
+.theme-toggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
