@@ -70,6 +70,22 @@ Commit and push. Submissions write to the Sheet; committee decisions write back.
 
 ---
 
+## ⚠️ Don't revoke the backend's Google access
+
+The Apps Script runs as **Execute as: Me**. Every auto-fill, Review Desk load, synthesis and digest runs under the permission the owner granted it. That permission lives in the owner's Google account under **Security → Third-party apps & services**, listed by the Apps Script project's name.
+
+**If that access is removed, the whole site stops working for everyone.** The pages still load from Netlify, but every call to the backend is refused. Nothing is lost: the data stays in the Sheet.
+
+**Symptoms:** the site loads, but **Auto-fill** fails ("Could not reach the lookup service") and the **Review Desk** shows no submissions, even though the Sheet has them.
+
+**Fix:** open the Apps Script editor, run any function (e.g. `doGet`), and approve the Google permission prompt. The site recovers immediately. No redeploy and no code change needed.
+
+**Prevention:** give the Apps Script project a clear name (click the title in the editor, e.g. **"LIC Trade Journal backend"**) so it isn't mistaken for a stray app during an account cleanup. An "Untitled project" in that list looks exactly like something safe to delete.
+
+Same symptoms, different cause: if the permission is fine, check that the web app deployment `app.js` points at is still **Active** (Apps Script → Deploy → Manage deployments). An archived deployment breaks the site the same way.
+
+---
+
 ## AI Synthesis
 
 The **Synthesize Submissions** button on the review desk sends all submissions (including the fundamentals) to Claude and returns a summary: themes the club is converging on, the strongest theses, shared risks, contrarian outliers, and which trades deserve the most committee time.
