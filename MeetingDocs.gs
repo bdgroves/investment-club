@@ -247,10 +247,12 @@ function buildDocHeader_(body, date) {
 }
 
 function writeTradeSection_(body, t) {
-  // Drop the "None yet" placeholder on the first submission.
+  // Find the "None yet" placeholder; it's removed at the end, once there is
+  // content after it (Docs won't delete the last paragraph of a document).
+  let placeholder = null;
   const paras = body.getParagraphs();
   for (let i = 0; i < paras.length; i++) {
-    if (paras[i].getText().indexOf('(None yet.') === 0) { paras[i].removeFromParent(); break; }
+    if (paras[i].getText().indexOf('(None yet.') === 0) { placeholder = paras[i]; break; }
   }
 
   const ticker = String(t.ticker || '').toUpperCase();
@@ -321,6 +323,7 @@ function writeTradeSection_(body, t) {
   });
 
   body.appendHorizontalRule();
+  if (placeholder) { try { placeholder.removeFromParent(); } catch (e) { placeholder.setText(''); } }
 }
 
 function money_(v) {
