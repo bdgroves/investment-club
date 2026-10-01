@@ -71,6 +71,11 @@ function doGet(e) {
     return reply(sendDigest(), e);
   }
 
+  if (action === 'meetingdoc') {
+    try { return reply(currentMeetingDoc(), e); }
+    catch (err) { return reply({ error: String(err) }, e); }
+  }
+
   // Writes routed through GET (JSONP) because browser no-cors POST
   // won't follow Apps Script's redirect. Payload arrives as ?data=<json>.
   if (action === 'submit' || action === 'decision') {
@@ -132,6 +137,14 @@ function appendTrade(t) {
     return t[f.key] || '';
   });
   sheet.appendRow(row);
+
+  // Also copy it into this month's meeting doc (MeetingDocs.gs).
+  // A Docs hiccup must never lose a submission, so failures are only logged.
+  try {
+    if (typeof addTradeToMeetingDoc === 'function') addTradeToMeetingDoc(t);
+  } catch (err) {
+    console.error('Meeting doc update failed: ' + err);
+  }
 }
 
 function updateDecision(id, status, notes) {

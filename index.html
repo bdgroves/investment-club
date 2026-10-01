@@ -28,7 +28,20 @@
   <p class="section-eyebrow">Member Submission</p>
   <h2 class="section-title">Submit a Trade</h2>
   <p class="section-sub">Complete your homework below. Every field matters — a strong submission helps the committee make a fast, well-informed decision.</p>
-  <p class="guide-link">New to this? <a href="guide.html" target="_blank">Read the quick plain-English guide →</a></p>
+  <div class="help-row">
+    <a class="help-card" href="How-to-Submit-a-Trade-Journal.pdf" download>
+      <span class="help-icon">⤓</span>
+      <span><strong>Download the how-to (PDF)</strong><small>9 steps with pictures. Print it or keep it handy.</small></span>
+    </a>
+    <a class="help-card" href="guide.html" target="_blank">
+      <span class="help-icon">?</span>
+      <span><strong>What does each box mean?</strong><small>The quick plain-English guide.</small></span>
+    </a>
+    <a class="help-card" id="meeting-doc-card" href="#" target="_blank" rel="noopener" style="display:none;">
+      <span class="help-icon">✎</span>
+      <span><strong id="meeting-doc-title">Next meeting's discussion doc</strong><small id="meeting-doc-sub">Read the journals and leave comments.</small></span>
+    </a>
+  </div>
 
   <div id="confirm-panel" class="confirm-panel" style="display:none;"></div>
 
@@ -373,6 +386,14 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+
+  loadMeetingDoc(function (d) {
+    if (!d || !d.url) return;
+    var card = document.getElementById('meeting-doc-card');
+    card.href = d.url;
+    document.getElementById('meeting-doc-title').textContent = 'Discussion doc for ' + d.meetingDate.replace(/^\w+, /, '').replace(/, \d{4}$/, '');
+    card.style.display = '';
+  });
 
   function submitTrade() {
     const ticker = val('f-ticker').toUpperCase();

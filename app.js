@@ -195,6 +195,23 @@ function starterQuestions(ticker, name, callback) {
   document.head.appendChild(script);
 }
 
+/* ── Upcoming meeting's discussion doc (Google Doc link, if it exists yet) ── */
+function loadMeetingDoc(callback) {
+  if (!SHEET_URL) { callback({}); return; }
+  const cbName = '__icMd_' + Date.now();
+  let script;
+  function cleanup() {
+    try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+  }
+  const timeout = setTimeout(function () { cleanup(); callback({}); }, 15000);
+  window[cbName] = function (data) { clearTimeout(timeout); cleanup(); callback(data || {}); };
+  script = document.createElement('script');
+  script.src = SHEET_URL + '?action=meetingdoc&callback=' + cbName + '&t=' + Date.now();
+  script.onerror = function () { clearTimeout(timeout); cleanup(); callback({}); };
+  document.head.appendChild(script);
+}
+
 /* ── Toast ── */
 function showToast(msg, isError) {
   const el = document.getElementById('toast');

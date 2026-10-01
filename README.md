@@ -86,6 +86,20 @@ Same symptoms, different cause: if the permission is fine, check that the web ap
 
 ---
 
+## Meeting Docs (one Google Doc per meeting)
+
+The club meets on the **2nd Wednesday** of each month. `MeetingDocs.gs` copies every website submission into that meeting's Google Doc ("LIC Meeting — November 2026"), where members read the journals and comment before the meeting.
+
+- A submission goes into the doc for the **next** meeting (on meeting day it rolls to the following month).
+- Docs are created automatically in a Drive folder **LIC Meeting Docs**, shared as *anyone with the link can comment*.
+- The **Meeting Docs** tab lists every doc; the **Members** tab holds the club email list for the Friday talking-points email.
+- The home page shows a link to the upcoming meeting's doc once it exists.
+- If Docs ever fails, the submission is still saved to the Sheet (the doc step only logs the error).
+
+**One-time setup:** add `MeetingDocs.gs` as a new script file → run `setupMeetingDocs` → approve the Docs/Drive permission prompt → Deploy → Manage deployments → edit → **New version**.
+
+---
+
 ## AI Synthesis
 
 The **Synthesize Submissions** button on the review desk sends all submissions (including the fundamentals) to Claude and returns a summary: themes the club is converging on, the strongest theses, shared risks, contrarian outliers, and which trades deserve the most committee time.
