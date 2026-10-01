@@ -53,6 +53,39 @@ function addTradeToMeetingDoc(t) {
   }
 }
 
+/* ---------- one-time catch-up, run by hand from the editor ----------
+ * Copies submissions made since the last meeting into the upcoming meeting's
+ * doc. Safe to re-run: a journal already in the doc (same ticker + member)
+ * is skipped.
+ */
+function copyRecentSubmissionsToDoc() {
+  const now = new Date();
+  const thisMonth = nthWeekdayOfMonth_(now.getFullYear(), now.getMonth());
+  const lastMeeting = thisMonth < now ? thisMonth : nthWeekdayOfMonth_(now.getFullYear(), now.getMonth() - 1);
+
+  const info = getOrCreateMeetingDoc_(nextMeetingDate_(now));
+  const doc = DocumentApp.openById(info.id);
+  const body = doc.getBody();
+  const existing = body.getText();
+
+  const rows = getSheet().getDataRange().getValues().slice(1);
+  let added = 0, skipped = 0;
+  rows.forEach(function (row) {
+    const t = {};
+    FIELDS.forEach(function (f, i) { t[f.key] = row[i]; });
+    const ts = new Date(t.timestamp);
+    if (!t.ticker || isNaN(ts.getTime()) || ts <= lastMeeting) return;
+    const ticker = String(t.ticker).toUpperCase();
+    const already = existing.indexOf(ticker + (t.stock ? ' — ' + t.stock : '')) !== -1 &&
+                    existing.indexOf('Submitted by ' + (t.member || 'a member')) !== -1;
+    if (already) { skipped++; return; }
+    writeTradeSection_(body, t);
+    added++;
+  });
+  doc.saveAndClose();
+  Logger.log('Added ' + added + ' journal(s), skipped ' + skipped + ' already there.\n' + info.url);
+}
+
 /* ---------- website: link to the upcoming meeting's doc (read-only) ---------- */
 function currentMeetingDoc() {
   const date = nextMeetingDate_(new Date());
@@ -225,7 +258,8 @@ function writeTradeSection_(body, t) {
   setFont_(body.appendParagraph(title).setHeading(DocumentApp.ParagraphHeading.HEADING2))
     .setFontSize(15).setBold(true).setForegroundColor(AMBER);
 
-  const when = Utilities.formatDate(new Date(), tz_(), 'MMM d, yyyy');
+  const stamp = t.timestamp ? new Date(t.timestamp) : new Date();
+  const when = Utilities.formatDate(isNaN(stamp.getTime()) ? new Date() : stamp, tz_(), 'MMM d, yyyy');
   setFont_(body.appendParagraph('Submitted by ' + (t.member || 'a member') + ' · ' + when))
     .setFontSize(10).setBold(false).setItalic(true).setForegroundColor('#4a5764');
 
