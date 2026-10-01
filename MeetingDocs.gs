@@ -127,7 +127,11 @@ function findMeetingDoc_(date) {
   for (let i = 0; i < rows.length; i++) {
     const cell = rows[i][0];
     const k = cell instanceof Date ? dateKey_(cell) : String(cell);
-    if (k === key && rows[i][3]) return { name: rows[i][1], url: rows[i][2], id: rows[i][3] };
+    if (k === key && rows[i][3]) {
+      // Skip a doc that was trashed or deleted, so a fresh one gets made.
+      try { if (!DriveApp.getFileById(rows[i][3]).isTrashed()) return { name: rows[i][1], url: rows[i][2], id: rows[i][3] }; }
+      catch (e) { /* gone for good */ }
+    }
   }
   return null;
 }
