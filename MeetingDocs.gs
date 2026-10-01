@@ -173,7 +173,9 @@ function buildDocHeader_(body, date) {
   body.clear();
   body.setMarginTop(54).setMarginBottom(54).setMarginLeft(60).setMarginRight(60);
 
-  const kicker = setFont_(body.getParagraphs()[0].setText('LAKEWOOD INVESTORS CLUB · MEETING DISCUSSION DOC'));
+  const kicker = body.getParagraphs()[0];   // setText returns nothing, so style it separately
+  kicker.setText('LAKEWOOD INVESTORS CLUB · MEETING DISCUSSION DOC');
+  setFont_(kicker);
   kicker.setFontSize(9).setBold(true).setForegroundColor(AMBER);
 
   setFont_(body.appendParagraph(formatLong_(date)).setHeading(DocumentApp.ParagraphHeading.TITLE))
