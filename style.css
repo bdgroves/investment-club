@@ -779,7 +779,7 @@ select option { background: var(--slate2); }
 .theme-toggle:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
 /* Help cards under the page intro: PDF, guide, meeting doc */
-.help-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 4px 0 18px; }
+.help-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 4px 0 18px; }
 .help-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--slate4);
   border-radius: 8px; background: var(--slate2); color: var(--fog); text-decoration: none; transition: border-color .15s; }
 .help-card:hover, .help-card:focus { border-color: var(--amber); }
@@ -787,3 +787,5 @@ select option { background: var(--slate2); }
 .help-card small { display: block; color: var(--mist); font-size: .8rem; margin-top: 2px; line-height: 1.35; }
 .help-icon { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--amber); color: var(--on-amber);
   display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+@media (max-width: 560px) { .help-row { grid-template-columns: 1fr; } }

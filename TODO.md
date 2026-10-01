@@ -1,41 +1,56 @@
 # Investment Club Trade Journal — TODO / State
 
-Live at: https://lakewood-investment-club.netlify.app (Netlify) · Review passphrase: `clubhouse`
-Last updated: Aug 20, 2026
+Live at: https://lakewood-investment-club.netlify.app (Netlify, auto-deploys from GitHub `main`) · Review passphrase: `clubhouse`
+Last updated: Oct 1, 2026
+
+## The monthly cycle (agreed with Bob and members, Oct 1 2026)
+
+Club meets the **2nd Wednesday** of each month.
+
+1. Members submit Trade Journals on the website (how-to PDF on the home page).
+2. Each submission is copied into **that meeting's Google Doc** ("LIC Meeting — October 2026"), shared so anyone with the link can comment.
+3. Members read and comment in the doc (how-to-comment PDF on the home page). Comments due Thursday evening.
+4. **Friday before the meeting, ~8am:** Claude reads the doc + all comments → neutral talking-points brief, emailed (HTML + PDF) to the **Members** tab.
+5. Meeting runs under Robert's Rules; Secretary / Bob / Chuck record Approve / Watch / Pass on the Review Desk.
+6. AI synthesis afterwards → follow-up report (email/PDF). **Not built yet.**
 
 ## ✅ Done & live
-- [x] Submission form matching the club's paper template
-- [x] Shared Google Sheets backend — writes (JSONP GET) + reads (JSONP)
-- [x] Review desk: fundamentals grid, thesis pull-out, pros/cons, Approve/Watch/Pass + notes, filters, stats
-- [x] AI synthesis, SERVER-SIDE (Apps Script → Claude; key in Script Properties)
-- [x] Synthesis auto-archives to the "Synthesis Log" tab
-- [x] Download synthesis as a formatted report + copy button
-- [x] **Ticker auto-fill** — type a symbol, click Auto-fill, objective fundamentals populate (Finnhub, server-side key); thesis/discussion stay manual
-- [x] Hosted on Netlify; blog post published at brooksgroves.com/blog/investment-club-blog.html
-- [x] Club is actively using it (real submissions coming in)
+- [x] Submission form matching the club's paper template; Auto-fill (Finnhub), "Help me get started" questions, "how did this land on your radar"
+- [x] Google Sheet backend (JSONP reads + writes); Review Desk with Approve/Watch/Pass + notes
+- [x] AI synthesis in facilitator mode (never grades or recommends); archives to **Synthesis Log**
+- [x] Pre-meeting digest email button (DIGEST_TO / owner)
+- [x] Light theme by default, Dark toggle, 18px base text, contrast checked
+- [x] Netlify linked to GitHub — push to `main` = live
+- [x] How-to-submit PDF (`How-to-Submit-a-Trade-Journal.pdf`) linked on home page
+- [x] **Meeting docs** (`MeetingDocs.gs`) — one Google Doc per meeting, auto-created, every submission appended; home page card links the upcoming doc (Oct 1, backend V20)
+- [x] **Members** tab in the Sheet (Name, Email, Role, Gets Friday Email Y/N, Notes)
+- [x] How-to-comment PDF (`How-to-Comment-in-the-Meeting-Doc.pdf`) linked on home page
+- [x] **Friday talking-points brief** code (`Brief.gs`) — written, needs one-time setup (below)
 
 ## 🔨 Next up
-- [ ] **AI facilitator mode** — shift the synthesis prompt from "grading" submissions to "presenting them with discussion notes" (Bob's request). Prompt change in Code.gs.
-- [ ] **Email submissions pre-meeting** — Apps Script compiles pending submissions into a digest + emails the member list a few days out (Bob's distribution question)
+- [ ] **Set up Brief.gs**: paste into Apps Script → run `previewTalkingPoints` (approve prompt, read the preview in your inbox) → run `installFridayBrief`. First real send: **Fri Oct 9, 2026**.
+- [ ] Fill in the **Members** tab with Bob's email list (Bob's email is blank)
+- [ ] **Post-meeting follow-up**: after decisions are recorded on the Review Desk, synthesis → follow-up email/PDF to Members
+- [ ] Update `guide.html` + quick-guide PDF for: Help me get started, "how did this land", Dark button, meeting doc
 - [ ] Set the committee's real passphrase (replace `clubhouse` in review.html)
-- [ ] Archive the leftover Apps Script deployment down to a single LIVE (hygiene)
 
-## 🗓️ Design with the group (Zoom)
-- [ ] **"Find the funds"** — every buy is paired with a funding decision (annual inflows). New workflow; design live with the club.
-- [ ] **Track executed/held positions over time** — portfolio/watchlist layer once trades get decided
+## 🧹 Housekeeping (Brooks, in Apps Script)
+- [ ] Rename the project from "Untitled project" to **LIC Trade Journal backend**
+- [ ] Delete `Tester.gs` (only existed to force the Mail permission prompt)
+- [ ] Clean test rows out of Submissions (and the MU test entry from the October doc, if not wanted)
+- [ ] Optionally move the meeting docs / Sheet to a club account later (currently owned by bdgroves1970@gmail.com)
+
+## 🗓️ Design with the group
+- [ ] "Find the funds" — pair each buy with a funding decision
+- [ ] Track executed/held positions over time (Holdings Tracker sheet exists in Drive)
 - [ ] Capture spontaneous ideas raised during meetings
 
-## 💤 Polish / someday
-- [ ] Mobile pass + first-run onboarding copy
-- [ ] Connect Netlify to the GitHub repo for auto-deploy on push (no more folder drag)
-- [ ] Per-trade AI "second opinion"; committee voting/scoring
-
 ## 🔑 Key facts (don't lose these)
-- **Live Apps Script deployment URL:** ends in `/AKfycbxSCx…` (V9). This is what `app.js` and the site use.
-- **Only ever update the LIVE deployment via New *version*** (Deploy → Manage deployments → ✏️ → Version: New version). Never "New deployment" — it mints a new URL and breaks the link.
-- **Two server-side keys, both in Apps Script → Project Settings → Script Properties:**
-  - `ANTHROPIC_API_KEY` — powers AI synthesis
-  - `FINNHUB_API_KEY` — powers ticker auto-fill
-- Submissions land in the **`Submissions`** tab; AI reports archive in **`Synthesis Log`**.
-- Repo: `github.com/bdgroves/investment-club` · Local: `…/Documents/ic-clean` · Deploy: drag folder to Netlify.
-- `seed.html` / `seed-macro.html` are admin-only demo loaders — not linked from the member site.
+- **Live Apps Script deployment:** `AKfycbw2rDPXhk1DpvrvihaEZQW-…` (V20 as of Oct 1, 2026). This is `SHEET_URL` in `app.js`. Older `AKfycbxSCx…` is dead.
+- **Only update via New *version*** (Deploy → Manage deployments → ✏️ → Version: New version → Deploy). Never "New deployment".
+- **Code.gs, MeetingDocs.gs, Brief.gs** must all exist in the Apps Script project. The repo copies are the source of truth; paste them in, Ctrl+S, then redeploy (Brief.gs alone doesn't need a redeploy — it runs on a timer).
+- **Script Properties:** `ANTHROPIC_API_KEY`, `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
+- **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs.
+- **Drive:** folder "LIC Meeting Docs" holds each month's doc and each Friday brief PDF.
+- **Don't revoke** the project's access in Google Account → Third-party apps; the whole site stops working (see README).
+- Repo: `github.com/bdgroves/investment-club`. `seed.html` / `seed-macro.html` are admin-only demo loaders.

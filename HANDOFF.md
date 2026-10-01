@@ -6,7 +6,7 @@ Everything you need to understand, run, and take ownership of the club's trade j
 
 ## 1. What it is (the 30-second version)
 
-A web app for the investment club. Members submit a structured trade idea, the submissions land in a shared Google Sheet, a committee dashboard lets you review and stamp each one (Approve / Watch / Pass), and an AI (Claude) reads the whole batch and writes a synthesis of the club's thinking. Every synthesis is auto-saved to the sheet as a running archive.
+A web app for the investment club. Members submit a structured trade idea, the submissions land in a shared Google Sheet **and in that month's meeting Google Doc**, members comment in the doc, and the Friday before each meeting an AI (Claude) emails everyone a neutral talking-points brief built from the journals and comments. At the meeting the committee stamps each idea (Approve / Watch / Pass) on a dashboard. Every AI report is auto-saved to the sheet as a running archive.
 
 No servers, no database. Three moving parts: a **static website** (the pages), a **Google Sheet + Apps Script** (the storage and the AI call), and an **Anthropic API key** (powers the AI).
 
@@ -25,6 +25,12 @@ No servers, no database. Three moving parts: a **static website** (the pages), a
   Synthesize   ───────────────▶    doGet(action=synthesize) ─────────▶ Claude API
                                         │                          (key stored in Google)
                                         └─▶ Sheet "Synthesis Log" tab   ◀── returns summary
+
+  (submit also) ──────────────▶    MeetingDocs.gs ──▶ Google Doc "LIC Meeting — <Month>"
+  Home page card ◀─────────────    doGet(action=meetingdoc) returns the doc link
+  Members comment in the doc ─────────────────────▶ (Google Docs)
+  Friday timer ─▶ Brief.gs reads doc + comments ──────────────────────▶ Claude API
+                     └─▶ email (HTML + PDF) to the Sheet's "Members" tab
 ```
 
 **Why it's built this way (important for anyone maintaining it):**
@@ -41,8 +47,8 @@ No servers, no database. Three moving parts: a **static website** (the pages), a
 |---|---|---|
 | **Live website** | The app members use | Netlify — `lakewood-investment-club.netlify.app` |
 | **Source code** | The files | GitHub repo `bdgroves/investment-club` |
-| **Local copy** | Working folder on the builder's PC | `…/Documents/ic-clean` |
-| **Data + backend** | Submissions, decisions, AI call | A Google Sheet with an Apps Script attached |
+| **Data + backend** | Submissions, decisions, AI calls | A Google Sheet with an Apps Script project attached (owned by bdgroves1970@gmail.com for now). Tabs: Submissions, Synthesis Log, Members, Meeting Docs |
+| **Meeting docs** | One Google Doc per meeting + Friday brief PDFs | Drive folder **LIC Meeting Docs** |
 | **AI key** | Powers the synthesis | Anthropic API key, stored in the Apps Script settings |
 
 The website, the sheet, and the API key are **independent**. You can move the website anywhere (Netlify, GitHub Pages, any static host) without touching the backend, and vice versa.
@@ -57,6 +63,9 @@ The website, the sheet, and the API key are **independent**. You can move the we
 | `review.html` | The committee dashboard (passphrase-gated) — review, decide, synthesize, download reports |
 | `app.js` | Front-end logic + the one setting that points the site at the backend (`SHEET_URL`) |
 | `Code.gs` | The Apps Script backend. **This is not deployed from the repo** — its live copy lives inside Google (see setup). The repo copy is the reference. |
+| `MeetingDocs.gs` | Apps Script: creates one Google Doc per meeting (2nd Wednesday) and appends each submission; also holds the Members-tab helpers |
+| `Brief.gs` | Apps Script: the Friday talking-points email + PDF, on a weekly timer |
+| `How-to-Submit-a-Trade-Journal.pdf`, `How-to-Comment-in-the-Meeting-Doc.pdf` | Member how-tos, linked from the home page |
 | `style.css` | Shared styling |
 | `seed.html` / `seed-macro.html` | Admin tools that load example trades. Not linked from the member site — run them yourself when you want demo data. |
 | `README.md`, `PROJECT.md`, `TODO.md`, `HANDOFF.md` | Docs |
@@ -83,7 +92,8 @@ Then follow Section 6.
 
 1. Create a new Google Sheet. Name it something like *Investment Club — Trade Journal*. Don't add any columns; the script builds them.
 2. In the sheet: **Extensions → Apps Script**.
-3. Delete the default code, paste in the entire contents of `Code.gs` from the repo, and **Save** (💾).
+3. Delete the default code, paste in the entire contents of `Code.gs` from the repo, and **Save** (💾). Then add two more script files (**+ → Script**) named `MeetingDocs` and `Brief`, and paste `MeetingDocs.gs` and `Brief.gs` into them.
+3b. Run `setupMeetingDocs` once from the function dropdown and approve the Docs/Drive permission prompt. It creates the **Members** and **Meeting Docs** tabs, the **LIC Meeting Docs** Drive folder, and the next meeting's doc.
 4. **Deploy → New deployment** → gear icon → **Web app**. Set:
    - **Execute as:** Me
    - **Who has access:** Anyone
@@ -122,11 +132,19 @@ If this key is missing, auto-fill simply tells the member "you can fill the numb
 
 ### C. Host the website (~2 min)
 
-Easiest is Netlify's free tier:
+Easiest is Netlify's free tier, linked to GitHub so every push publishes itself:
 
-1. Sign in at `app.netlify.com` → **Add new site → Deploy manually**.
-2. Drag the project folder (the one containing `index.html`) onto the drop zone. Make sure `index.html` sits at the **top level** of what you drop.
+1. Sign in at `app.netlify.com` → **Add new site → Import an existing project → GitHub** → pick the repo.
+2. Build command: *(leave empty)*. Publish directory: `.`
 3. It gives you a URL like `something.netlify.app`. Rename it in the site settings to something clean.
+
+(The current site is set up this way: push to `main` and it's live in under a minute. Manual drag-and-drop also works.)
+
+### C2. Turn on the Friday brief (~3 min)
+
+1. Fill in the **Members** tab: Name, Email, Role, Gets Friday Email (Y/N).
+2. In Apps Script, run `previewTalkingPoints` and approve the prompt. The brief comes to **your** inbox only; read it.
+3. Run `installFridayBrief`. From then on it sends every Friday before a meeting, around 8am. `removeFridayBrief` turns it off.
 
 (You can also host these static files on GitHub Pages, Cloudflare Pages, or any static host — the app doesn't care.)
 
@@ -147,10 +165,11 @@ Open `review.html`, find `const PASS = 'clubhouse'`, and change `'clubhouse'` to
 
 ## 7. Running it day to day
 
-- **Members** open the site, fill out the form, submit. Their trade appears in the sheet and on the review desk.
+- **Members** open the site, fill out the form, submit. Their trade appears in the sheet, on the review desk, and in the month's meeting doc.
+- **Before the meeting** members comment in the meeting doc (link on the home page). The Friday before, everyone on the Members tab gets the talking-points brief.
 - **The committee** opens `review.html`, enters the passphrase, and reviews. Each card gets **Approve / Watch / Pass** plus a notes box. Hit **↻ Refresh** to pull the latest.
 - **Synthesis:** click **Synthesize**. After a few seconds you get a committee-style briefing. Use **⭳ Download report** for a clean formatted copy, or **⧉ Copy** for the raw text. Every run also auto-saves to the **Synthesis Log** tab.
-- **Starting a fresh cycle:** delete the old rows in the `Submissions` tab (keep the header). The `Synthesis Log` is your history — leave it alone.
+- **Starting a fresh cycle:** nothing to do — the next submission after a meeting automatically starts next month's doc. Old rows in `Submissions` can stay or be deleted (keep the header). The `Synthesis Log` and the LIC Meeting Docs folder are your history — leave them alone.
 
 ---
 
@@ -173,6 +192,9 @@ No monthly minimums, no servers. The only metered cost is the AI, and it's tiny 
 - **Both keys live in Script Properties**, never in the code: `ANTHROPIC_API_KEY` (synthesis) and `FINNHUB_API_KEY` (auto-fill). If a feature says it's "not set up," the property name is wrong or you didn't redeploy after adding it.
 - **Writes use JSONP GET on purpose.** If you ever refactor to `fetch()` POST, expect writes to vanish silently — Apps Script's redirect eats them. Keep the JSONP pattern.
 - **Static hosting caches hard.** If a change doesn't show up live, it's usually a stale cache, not a broken deploy — confirm the committed file is correct first (e.g. view it on GitHub), then bust the cache. (Netlify is far less prone to this than GitHub Pages, which is why the app lives on Netlify.)
+- **Don't revoke the project in Google Account → Third-party apps.** It runs as its owner; removing that access breaks the whole site until someone re-authorizes (open Apps Script, run any function, Allow). Name the project something recognizable ("LIC Trade Journal backend").
+- **Paste, save, *then* deploy.** A deploy only includes code that was saved (Ctrl+S). If the website behaves like the old version, check that the file in the editor really is the new one.
+- **Google Docs gotchas** (already handled in MeetingDocs.gs, noted for future edits): `Paragraph.setText()` returns nothing, so don't chain off it; appended text inherits the previous paragraph's bold/size, so set them explicitly; a doc's last paragraph can't be removed.
 - **The seed loaders write real rows.** `seed.html` / `seed-macro.html` push example trades into the live sheet. Handy for demos; just delete the rows afterward, and don't link them from the member-facing site.
 
 ---
@@ -187,10 +209,10 @@ Handing this to the club? Two levels:
 
 **Full transfer (club owns everything):**
 - [ ] Club forks/copies the repo under its own GitHub
-- [ ] Club creates its own Google Sheet + Apps Script (Section 6A)
+- [ ] Club creates its own Google Sheet + Apps Script with all three .gs files (Section 6A), and turns on the Friday brief (6C2)
 - [ ] Club creates its own Anthropic API key (Section 6B) and Finnhub API key (Section 6B2)
 - [ ] Club hosts the site (Section 6C) and sets its own `SHEET_URL` (6D)
 - [ ] Club sets its own passphrase (6E)
-- [ ] Confirm the loop end-to-end: submit a test trade → it lands in the sheet → shows on the review desk → synthesis returns and logs
+- [ ] Confirm the loop end-to-end: submit a test trade → it lands in the sheet and the meeting doc → shows on the review desk → `previewTalkingPoints` emails a brief → synthesis returns and logs
 
 Once the last box is checked, the builder can walk away and nothing breaks. That's the whole point.

@@ -15,7 +15,11 @@ A lightweight trade submission and review system for investment clubs.
 | `seed.html` | One-time loader for starter trades |
 | `style.css` | Shared styles |
 | `app.js` | Shared logic + storage layer |
-| `Code.gs` | Google Apps Script backend (optional, for shared persistence) |
+| `Code.gs` | Google Apps Script backend: submissions, decisions, auto-fill, synthesis, digest |
+| `MeetingDocs.gs` | Apps Script: one Google Doc per meeting, each submission appended |
+| `Brief.gs` | Apps Script: Friday-before-the-meeting talking-points email + PDF |
+| `guide.html` | Plain-English guide to every form field |
+| `How-to-*.pdf` | Member how-to PDFs (submitting, commenting), linked on the home page |
 
 ---
 
@@ -33,6 +37,10 @@ Members fill out a structured trade case, matching the committee's paper form:
 On the review desk each submission becomes a card with the fundamentals laid out in a grid, the thesis pulled out, pros in green / cons in red, and a decision bar (Approve / Watch / Pass) plus committee notes.
 
 ---
+
+## Hosting
+
+Live on **Netlify**, linked to this repo: every push to `main` publishes automatically (no build step; `_headers` / `netlify.toml` turn off caching).
 
 ## Prototype Setup (GitHub Pages, no backend)
 
@@ -86,17 +94,46 @@ Same symptoms, different cause: if the permission is fine, check that the web ap
 
 ---
 
-## Meeting Docs (one Google Doc per meeting)
+## The monthly meeting cycle
 
-The club meets on the **2nd Wednesday** of each month. `MeetingDocs.gs` copies every website submission into that meeting's Google Doc ("LIC Meeting — November 2026"), where members read the journals and comment before the meeting.
+The club meets on the **2nd Wednesday** of each month. Around that meeting the app runs a loop so members arrive having already read and discussed the ideas, and the meeting is spent on the good stuff.
 
+| When | What happens | Code |
+|---|---|---|
+| Any time | Member submits a Trade Journal on the website | `index.html` → `Code.gs` |
+| Instantly | The journal is copied into **that meeting's Google Doc** ("LIC Meeting — November 2026") | `MeetingDocs.gs` |
+| Before Thursday night | Members read the doc and leave **comments** | (Google Docs) |
+| **Friday before, ~8am** | Claude reads the doc + every comment and emails a neutral **talking-points brief** (HTML email + PDF) to the **Members** tab | `Brief.gs` |
+| Meeting | Discussion under Robert's Rules; decisions recorded on the **Review Desk** | `review.html` |
+| After | AI synthesis → follow-up report *(not built yet)* | — |
+
+### Meeting Docs (`MeetingDocs.gs`)
 - A submission goes into the doc for the **next** meeting (on meeting day it rolls to the following month).
-- Docs are created automatically in a Drive folder **LIC Meeting Docs**, shared as *anyone with the link can comment*.
-- The **Meeting Docs** tab lists every doc; the **Members** tab holds the club email list for the Friday talking-points email.
-- The home page shows a link to the upcoming meeting's doc once it exists.
+- Docs are created automatically in the Drive folder **LIC Meeting Docs**, shared as *anyone with the link can comment* (commenting needs a Google account). Written in Roboto.
+- The **Meeting Docs** tab in the Sheet lists every doc. The home page shows a card linking the upcoming one (`?action=meetingdoc`).
 - If Docs ever fails, the submission is still saved to the Sheet (the doc step only logs the error).
+- A trashed doc is ignored and a fresh one is made.
+- `copyRecentSubmissionsToDoc()` (run by hand) copies everything since the last meeting into the doc; safe to re-run, it skips journals already there.
 
-**One-time setup:** add `MeetingDocs.gs` as a new script file → run `setupMeetingDocs` → approve the Docs/Drive permission prompt → Deploy → Manage deployments → edit → **New version**.
+### Friday brief (`Brief.gs`)
+- `fridayBriefCheck` runs every Friday ~8am on a timer and only sends when the meeting is the coming Wednesday.
+- Reads comments through the Drive API with the script's own sign-in (no Advanced Service needed).
+- Claude prompt is facilitator-only: never ranks or recommends, credits members by name, uses only the journals' numbers, ends with a Robert's-Rules running order.
+- Email goes **To:** the script owner, **Bcc:** everyone in the Members tab whose "Gets Friday Email" isn't `N`. PDF is attached and saved to the LIC Meeting Docs folder. A copy of the text is logged in **Synthesis Log**.
+
+### Member guides (linked on the home page)
+- `How-to-Submit-a-Trade-Journal.pdf`: 9 steps with screenshots
+- `How-to-Comment-in-the-Meeting-Doc.pdf`: commenting on a computer, iPad or phone
+- `guide.html`: what each form field means
+
+### One-time setup in Apps Script
+The project must contain **Code.gs, MeetingDocs.gs and Brief.gs** (paste each from this repo, Ctrl+S).
+1. Run `setupMeetingDocs` → approve the Docs/Drive prompt. Creates the Members and Meeting Docs tabs, the Drive folder, and the next meeting's doc.
+2. **Deploy → Manage deployments → ✏️ → New version → Deploy** (the website needs this for the meeting-doc link and auto-copy).
+3. Run `previewTalkingPoints` → approve the prompt → the brief arrives in **your** inbox only.
+4. Run `installFridayBrief` → the Friday send is on. (`removeFridayBrief` turns it off; `sendTalkingPointsNow` sends to everyone immediately.)
+
+Brief.gs runs on a timer, so changes to it don't need a redeploy. Changes to Code.gs or MeetingDocs.gs do.
 
 ---
 
