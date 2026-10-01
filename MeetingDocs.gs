@@ -196,7 +196,7 @@ function buildDocHeader_(body, date) {
   for (let i = 0; i < cell.getNumChildren(); i++) {
     const p = cell.getChild(i);
     if (p.getType() === DocumentApp.ElementType.PARAGRAPH) {
-      setFont_(p.asParagraph()).setFontSize(10.5).setForegroundColor('#1b2530');
+      setFont_(p.asParagraph()).setFontSize(10.5).setBold(false).setForegroundColor('#1b2530');
     }
   }
   const first = cell.getChild(0).asParagraph();
@@ -204,7 +204,7 @@ function buildDocHeader_(body, date) {
   firstText.setBold(0, 'How this works'.length - 1, true).setForegroundColor(0, 'How this works'.length - 1, AMBER);
 
   setFont_(body.appendParagraph('Submissions').setHeading(DocumentApp.ParagraphHeading.HEADING1))
-    .setFontSize(16).setForegroundColor('#1b2530');
+    .setFontSize(16).setBold(true).setForegroundColor('#1b2530');
   setFont_(body.appendParagraph('(None yet. They appear here as members submit on the website.)'))
     .setItalic(true).setForegroundColor('#4a5764').setFontSize(10.5);
 }
@@ -223,7 +223,7 @@ function writeTradeSection_(body, t) {
 
   const when = Utilities.formatDate(new Date(), tz_(), 'MMM d, yyyy');
   setFont_(body.appendParagraph('Submitted by ' + (t.member || 'a member') + ' · ' + when))
-    .setFontSize(10).setItalic(true).setForegroundColor('#4a5764');
+    .setFontSize(10).setBold(false).setItalic(true).setForegroundColor('#4a5764');
 
   const facts = [
     ['Price today', money_(t.shareValue)],
@@ -254,12 +254,12 @@ function writeTradeSection_(body, t) {
       for (let c = 0; c < 4; c++) {
         const cell = tbl.getCell(r, c).setPaddingTop(3).setPaddingBottom(3);
         const p = setFont_(cell.getChild(0).asParagraph()).setFontSize(10);
-        if (c % 2 === 0) { cell.setBackgroundColor('#f4f6f9'); p.setForegroundColor('#4a5764'); }
+        if (c % 2 === 0) { cell.setBackgroundColor('#f4f6f9'); p.setBold(false).setForegroundColor('#4a5764'); }
         else { p.setBold(true).setForegroundColor('#1b2530'); }
       }
     }
     if (t.dataSource) {
-      setFont_(body.appendParagraph('Numbers: ' + t.dataSource)).setFontSize(9).setForegroundColor('#4a5764');
+      setFont_(body.appendParagraph('Numbers: ' + t.dataSource)).setFontSize(9).setBold(false).setItalic(false).setForegroundColor('#4a5764');
     }
   }
 
@@ -278,7 +278,7 @@ function writeTradeSection_(body, t) {
       .setFontSize(11.5).setBold(true).setForegroundColor('#1b2530');
     text.split(/\r?\n/).forEach(function (line) {
       if (!line.trim()) return;
-      setFont_(body.appendParagraph(line.trim())).setFontSize(11).setBold(false).setForegroundColor('#1b2530');
+      setFont_(body.appendParagraph(line.trim())).setFontSize(11).setBold(false).setItalic(false).setForegroundColor('#1b2530');
     });
   });
 
