@@ -35,9 +35,9 @@ Club meets the **2nd Wednesday** of each month.
 - [ ] Set the committee's real passphrase (replace `clubhouse` in review.html)
 
 ## 🧹 Housekeeping (Brooks, in Apps Script)
-- [ ] Rename the project from "Untitled project" to **LIC Trade Journal backend**
-- [ ] Delete `Tester.gs` (only existed to force the Mail permission prompt)
-- [ ] Clean test rows out of Submissions (and the MU test entry from the October doc, if not wanted)
+- [x] Rename the project from "Untitled project" to **LIC Trade Journal backend** (Oct 1)
+- [x] Delete `Tester.gs` (Oct 1)
+- [x] Clear practice data: Submissions, Synthesis Log, October doc, test brief PDF (Oct 1)
 - [ ] Optionally move the meeting docs / Sheet to a club account later (currently owned by bdgroves1970@gmail.com)
 
 ## 🗓️ Design with the group
