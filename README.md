@@ -17,7 +17,7 @@ A lightweight trade submission and review system for investment clubs.
 | `app.js` | Shared logic + storage layer |
 | `Code.gs` | Google Apps Script backend: submissions, decisions, auto-fill, synthesis, digest |
 | `MeetingDocs.gs` | Apps Script: one Google Doc per meeting, each submission appended |
-| `Brief.gs` | Apps Script: Friday-before-the-meeting talking-points email + PDF |
+| `Brief.gs` | Apps Script: the two club emails: Friday ideas-for-review, and the meeting-day brief (comments + AI discussion points) |
 | `guide.html` | Plain-English guide to every form field |
 | `How-to-*.pdf` | Member how-to PDFs (submitting, commenting), linked on the home page |
 
@@ -100,11 +100,12 @@ The club meets on the **2nd Wednesday** of each month. Around that meeting the a
 
 | When | What happens | Code |
 |---|---|---|
-| Any time | Member submits a Trade Journal on the website | `index.html` → `Code.gs` |
+| Any time | Member submits a Trade Journal on the website (autosaved as a draft on their device until they press Submit) | `index.html` → `Code.gs` |
 | Instantly | The journal is copied into **that meeting's Google Doc** ("LIC Meeting — November 2026") | `MeetingDocs.gs` |
-| Before Thursday night | Members read the doc and leave **comments** | (Google Docs) |
-| **Friday before, ~8am** | Claude reads the doc + every comment and emails a neutral **talking-points brief** (HTML email + PDF) to the **Members** tab | `Brief.gs` |
-| Meeting | Discussion under Robert's Rules; decisions recorded on the **Review Desk** | `review.html` |
+| **Friday before, ~8am** | **Ideas-for-review email** to the Members tab: list of ideas, link to the doc, doc attached as PDF | `Brief.gs` |
+| Fri → Tue night | Members read the doc and leave **comments**; everyone sees them live | (Google Docs) |
+| **Meeting day, ~7am** | **Meeting-day brief**: every comment, grouped by stock, plus Claude's neutral summary of suggested discussion points (HTML email + PDF) | `Brief.gs` |
+| Meeting | Discussion under Robert's Rules, prioritized by the President, Treasurer and Secretary if time is short; decisions recorded on the **Review Desk** | `review.html` |
 | After | AI synthesis → follow-up report *(not built yet)* | — |
 
 ### Meeting Docs (`MeetingDocs.gs`)
@@ -115,11 +116,16 @@ The club meets on the **2nd Wednesday** of each month. Around that meeting the a
 - A trashed doc is ignored and a fresh one is made.
 - `copyRecentSubmissionsToDoc()` (run by hand) copies everything since the last meeting into the doc; safe to re-run, it skips journals already there.
 
-### Friday brief (`Brief.gs`)
-- `fridayBriefCheck` runs every Friday ~8am on a timer and only sends when the meeting is the coming Wednesday.
-- Reads comments through the Drive API with the script's own sign-in (no Advanced Service needed).
-- Claude prompt is facilitator-only: never ranks or recommends, credits members by name, uses only the journals' numbers, ends with a Robert's-Rules running order.
-- Email goes **To:** the script owner, **Bcc:** everyone in the Members tab whose "Gets Friday Email" isn't `N`. PDF is attached and saved to the LIC Meeting Docs folder. A copy of the text is logged in **Synthesis Log**.
+### Club emails (`Brief.gs`), following Bob's "Trade Journal Club Flow"
+- `fridayIdeasCheck` runs every Friday ~8am; sends only when the meeting is the coming Wednesday. No AI: it lists each idea (stock, member, one line of thesis), links the doc, attaches the doc as a PDF, and asks for comments by the evening before.
+- `meetingDayCheck` runs every Wednesday ~7am; sends only on the 2nd Wednesday. It reads every comment through the Drive API (the script's own sign-in, no Advanced Service), lists them **verbatim, grouped by stock** (matched by where the commented words sit in the doc), then adds Claude's discussion points.
+- Claude prompt is facilitator-only: never ranks or recommends, credits members by name, uses only the journals' numbers, ends with a possible running order and notes the President, Treasurer and Secretary set final priorities.
+- Both go **To:** the script owner, **Bcc:** everyone in the Members tab whose "Gets Club Emails" isn't `N`. The meeting-day PDF is saved to the LIC Meeting Docs folder and its text logged in **Synthesis Log**.
+- Comments only: Google's comment API doesn't include *suggested edits*, so members should use comments for anything they want in the brief.
+
+### Drafts (`index.html`)
+- The form autosaves to the browser (`localStorage`, key `ic_draft_v1`) as the member types, after Auto-fill, and when the page closes. Coming back on the same device restores it with a "Welcome back" banner and a **Start over** button. **Save draft** saves on demand. The draft is cleared on Submit.
+- Drafts are per device and browser (not shared between a computer and an iPad), and private browsing may not keep them.
 
 ### Member guides (linked on the home page)
 - `How-to-Submit-a-Trade-Journal.pdf`: 9 steps with screenshots
@@ -130,8 +136,8 @@ The club meets on the **2nd Wednesday** of each month. Around that meeting the a
 The project must contain **Code.gs, MeetingDocs.gs and Brief.gs** (paste each from this repo, Ctrl+S).
 1. Run `setupMeetingDocs` → approve the Docs/Drive prompt. Creates the Members and Meeting Docs tabs, the Drive folder, and the next meeting's doc.
 2. **Deploy → Manage deployments → ✏️ → New version → Deploy** (the website needs this for the meeting-doc link and auto-copy).
-3. Run `previewTalkingPoints` → approve the prompt → the brief arrives in **your** inbox only.
-4. Run `installFridayBrief` → the Friday send is on. (`removeFridayBrief` turns it off; `sendTalkingPointsNow` sends to everyone immediately.)
+3. Run `previewIdeasEmail` and `previewMeetingBrief` → approve the prompt → each arrives in **your** inbox only.
+4. Run `installClubEmails` → both sends are on. (`removeClubEmails` turns them off; `sendIdeasEmailNow` / `sendMeetingBriefNow` send to everyone immediately. The old names `installFridayBrief`, `previewTalkingPoints`, `sendTalkingPointsNow` still work.)
 
 Brief.gs runs on a timer, so changes to it don't need a redeploy. Changes to Code.gs or MeetingDocs.gs do.
 

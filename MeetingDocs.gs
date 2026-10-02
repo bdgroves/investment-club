@@ -11,8 +11,8 @@
  *     a Drive folder "LIC Meeting Docs", and shared so anyone with the link
  *     can comment (commenting needs a Google account).
  *   - The "Meeting Docs" tab in the Sheet lists every doc and its link.
- *   - The "Members" tab holds the club email list (used for the Friday
- *     talking-points email).
+ *   - The "Members" tab holds the club email list (used by Brief.gs for the
+ *     Friday ideas email and the meeting-day brief).
  *
  * FIRST-TIME SETUP (once, from the Apps Script editor):
  *   1. Select setupMeetingDocs in the function dropdown and click Run.
@@ -127,14 +127,14 @@ function getMembersSheet_() {
   let sh = ss.getSheetByName(MEMBERS_TAB);
   if (!sh) {
     sh = ss.insertSheet(MEMBERS_TAB);
-    sh.appendRow(['Name', 'Email', 'Role', 'Gets Friday Email (Y/N)', 'Notes']);
+    sh.appendRow(['Name', 'Email', 'Role', 'Gets Club Emails (Y/N)', 'Notes']);
     styleHeader_(sh, 5);
     sh.setColumnWidth(1, 180); sh.setColumnWidth(2, 260); sh.setColumnWidth(4, 170); sh.setColumnWidth(5, 260);
   }
   return sh;
 }
 
-// Active member emails, for the Friday talking-points send.
+// Active member emails, for the club emails in Brief.gs.
 function memberEmails_() {
   const rows = getMembersSheet_().getDataRange().getValues().slice(1);
   return rows
@@ -226,7 +226,8 @@ function buildDocHeader_(body, date) {
     '(or right-click → Comment). Type your thought and click Comment. ' +
     'You can reply to someone else\'s comment the same way.\n\n' +
     'Please comment rather than editing the text, so each member\'s journal stays in their own words. ' +
-    'The Friday before the meeting, everyone gets a talking-points brief built from these journals and your comments.'
+    'The Friday before the meeting, everyone is emailed these ideas to review. Everyone sees everyone\'s comments as they\'re ' +
+    'added (refresh to see the latest). On meeting day, a second email brings all the comments plus an AI summary of suggested discussion points.'
   ]]);
   how.setBorderWidth(0);
   const cell = how.getCell(0, 0).setBackgroundColor('#f6f1e6').setPaddingTop(10).setPaddingBottom(10).setPaddingLeft(14).setPaddingRight(14);

@@ -7,12 +7,15 @@ Last updated: Oct 1, 2026
 
 Club meets the **2nd Wednesday** of each month.
 
-1. Members submit Trade Journals on the website (how-to PDF on the home page).
+Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
+
+1. Members submit Trade Journals on the website (drafts autosave on their device; how-to PDF on the home page).
 2. Each submission is copied into **that meeting's Google Doc** ("LIC Meeting — October 2026"), shared so anyone with the link can comment.
-3. Members read and comment in the doc (how-to-comment PDF on the home page). Comments due Thursday evening.
-4. **Friday before the meeting, ~8am:** Claude reads the doc + all comments → neutral talking-points brief, emailed (HTML + PDF) to the **Members** tab.
-5. Meeting runs under Robert's Rules; Secretary / Bob / Chuck record Approve / Watch / Pass on the Review Desk.
-6. AI synthesis afterwards → follow-up report (email/PDF). **Not built yet.**
+3. **Friday before, ~8am:** ideas-for-review email (list + doc link + doc PDF) to the **Members** tab.
+4. Members comment in the doc through the evening before; everyone sees comments live (how-to-comment PDF on the home page).
+5. **Meeting day, ~7am:** all comments (verbatim, by stock) + Claude's neutral discussion points, emailed (HTML + PDF).
+6. Meeting runs under Robert's Rules, prioritized by President / Treasurer / Secretary; decisions recorded on the Review Desk.
+7. AI summary of the meeting's decisions → follow-up email/PDF. **Not built yet.**
 
 ## ✅ Done & live
 - [x] Submission form matching the club's paper template; Auto-fill (Finnhub), "Help me get started" questions, "how did this land on your radar"
@@ -23,14 +26,16 @@ Club meets the **2nd Wednesday** of each month.
 - [x] Netlify linked to GitHub — push to `main` = live
 - [x] How-to-submit PDF (`How-to-Submit-a-Trade-Journal.pdf`) linked on home page
 - [x] **Meeting docs** (`MeetingDocs.gs`) — one Google Doc per meeting, auto-created, every submission appended; home page card links the upcoming doc (Oct 1, backend V20)
-- [x] **Members** tab in the Sheet (Name, Email, Role, Gets Friday Email Y/N, Notes)
+- [x] **Members** tab in the Sheet (Name, Email, Role, Gets Club Emails Y/N, Notes)
 - [x] How-to-comment PDF (`How-to-Comment-in-the-Meeting-Doc.pdf`) linked on home page
-- [x] **Friday talking-points brief** code (`Brief.gs`) — written, needs one-time setup (below)
+- [x] **Club emails** (`Brief.gs`): Friday ideas-for-review + meeting-day brief (comments + AI discussion points). Needs one-time setup (below)
+- [x] **Save as draft**: form autosaves on the device, "Welcome back" restore, Save draft button (Bob's request)
 
 ## 🔨 Next up
-- [ ] **Set up Brief.gs**: paste into Apps Script → run `previewTalkingPoints` (approve prompt, read the preview in your inbox) → run `installFridayBrief`. First real send: **Fri Oct 9, 2026**.
+- [ ] **Set up the new Brief.gs**: paste over the old one → run `previewIdeasEmail` and `previewMeetingBrief` (approve prompt, read both in your inbox) → run `installClubEmails`. First sends: ideas **Fri Oct 9**, brief **Wed Oct 14** morning.
 - [ ] Fill in the **Members** tab with Bob's email list (Bob's email is blank)
-- [ ] **Post-meeting follow-up**: after decisions are recorded on the Review Desk, synthesis → follow-up email/PDF to Members
+- [ ] **Post-meeting follow-up**: AI summary of the meeting's investment decisions (from the Review Desk) → follow-up email/PDF to Members
+- [ ] Later (Bob's "future thoughts"): AI review of existing holdings; portfolio structure and sector composition (Holdings Tracker sheet exists)
 - [ ] Update `guide.html` + quick-guide PDF for: Help me get started, "how did this land", Dark button, meeting doc
 - [ ] Set the committee's real passphrase (replace `clubhouse` in review.html)
 
@@ -51,6 +56,6 @@ Club meets the **2nd Wednesday** of each month.
 - **Code.gs, MeetingDocs.gs, Brief.gs** must all exist in the Apps Script project. The repo copies are the source of truth; paste them in, Ctrl+S, then redeploy (Brief.gs alone doesn't need a redeploy — it runs on a timer).
 - **Script Properties:** `ANTHROPIC_API_KEY`, `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
 - **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs.
-- **Drive:** folder "LIC Meeting Docs" holds each month's doc and each Friday brief PDF.
+- **Drive:** folder "LIC Meeting Docs" holds each month's doc and each meeting-day brief PDF.
 - **Don't revoke** the project's access in Google Account → Third-party apps; the whole site stops working (see README).
 - Repo: `github.com/bdgroves/investment-club`. `seed.html` / `seed-macro.html` are admin-only demo loaders.

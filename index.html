@@ -48,6 +48,7 @@
   </div>
 
   <div id="confirm-panel" class="confirm-panel" style="display:none;"></div>
+  <div id="draft-banner" class="draft-banner" style="display:none;"></div>
 
   <!-- Block 1: Identification -->
   <div class="form-block">
@@ -266,8 +267,10 @@
 
   <div style="display:flex; align-items:center; gap:16px; margin-top:8px;">
     <button class="btn btn-primary" onclick="submitTrade()">Submit Trade for Review →</button>
+    <button type="button" class="btn btn-ghost" onclick="saveDraft(true)">Save draft</button>
     <span id="submit-status" style="font-size:.82rem; color:var(--mist);"></span>
   </div>
+  <p class="draft-note" id="draft-status">Not ready yet? Your work is saved automatically on this device as you type, so you can close the page and finish later.</p>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -332,6 +335,7 @@
       const src = data.source || 'Finnhub market data';
       const asOf = data.asOf || 'latest';
       lastFillSource = src + ', as of ' + asOf;
+      setTimeout(function () { saveDraft(false); }, 0);
       status.style.color = 'var(--green2)';
       status.textContent = '✓ Filled ' + filled + ' fields. Review them, then write your thesis below.';
       const stamp = document.getElementById('source-stamp');
@@ -440,6 +444,7 @@
     };
 
     saveTrade(trade);
+    clearDraft();
 
     FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('f-date').valueAsDate = new Date();
@@ -470,6 +475,87 @@
     document.getElementById('f-ticker').focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  /* ── Drafts: autosave on this device, restore on return ── */
+  const DRAFT_KEY = 'ic_draft_v1';
+  let draftTimer = null, draftDirty = false;
+
+  function draftHasContent() {
+    return FIELD_IDS.some(function (id) { return id !== 'f-date' && val(id); });
+  }
+  function draftTime(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ' at ' +
+             d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    } catch (e) { return ''; }
+  }
+  function setDraftStatus(msg) {
+    const el = document.getElementById('draft-status');
+    if (el) el.textContent = msg;
+  }
+  function saveDraft(manual) {
+    clearTimeout(draftTimer);
+    try {
+      if (!draftHasContent()) {
+        localStorage.removeItem(DRAFT_KEY);
+        if (manual) showToast('Nothing to save yet. Start with the stock symbol.', true);
+        return;
+      }
+      const d = { saved: new Date().toISOString(), source: lastFillSource, fields: {} };
+      FIELD_IDS.forEach(function (id) { d.fields[id] = document.getElementById(id).value; });
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+      draftDirty = false;
+      setDraftStatus('✓ Draft saved on this device ' + draftTime(d.saved) + '. Come back any time to finish, then press Submit.');
+      if (manual) showToast('Draft saved on this device. Come back any time to finish.');
+    } catch (e) {
+      if (manual) showToast('This browser won\u2019t save drafts (private mode?). Please submit before leaving.', true);
+    }
+  }
+  function clearDraft() {
+    clearTimeout(draftTimer);
+    draftDirty = false;
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    setDraftStatus('');
+    const b = document.getElementById('draft-banner');
+    b.style.display = 'none'; b.innerHTML = '';
+  }
+  function startOver() {
+    FIELD_IDS.forEach(function (id) { document.getElementById(id).value = ''; });
+    document.getElementById('f-date').valueAsDate = new Date();
+    lastFillSource = '';
+    clearDraft();
+    setDraftStatus('Not ready yet? Your work is saved automatically on this device as you type, so you can close the page and finish later.');
+    document.getElementById('f-ticker').focus();
+  }
+  function restoreDraft() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) {}
+    if (!d || !d.fields) return;
+    FIELD_IDS.forEach(function (id) {
+      if (d.fields[id] !== undefined && d.fields[id] !== '') document.getElementById(id).value = d.fields[id];
+    });
+    lastFillSource = d.source || '';
+    const name = (d.fields['f-ticker'] || '').toUpperCase();
+    const b = document.getElementById('draft-banner');
+    b.innerHTML = '<div><strong>Welcome back!</strong> We restored your unfinished draft' + (name ? ' for <strong>' + name + '</strong>' : '') +
+      ' (saved ' + draftTime(d.saved) + '). Pick up where you left off, then press Submit at the bottom.</div>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="startOver()">Start over</button>';
+    b.style.display = 'flex';
+    setDraftStatus('✓ Draft saved on this device ' + draftTime(d.saved) + '. Come back any time to finish, then press Submit.');
+  }
+  FIELD_IDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    ['input', 'change'].forEach(function (ev) {
+      el.addEventListener(ev, function () {
+        draftDirty = true;
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(function () { saveDraft(false); }, 1200);
+      });
+    });
+  });
+  window.addEventListener('pagehide', function () { if (draftDirty) saveDraft(false); });
+  restoreDraft();
 
 </script>
 </body>

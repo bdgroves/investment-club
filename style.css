@@ -789,3 +789,11 @@ select option { background: var(--slate2); }
   display: flex; align-items: center; justify-content: center; font-weight: 700; }
 
 @media (max-width: 560px) { .help-row { grid-template-columns: 1fr; } }
+
+/* Drafts */
+.draft-note { font-size: .8rem; color: var(--mist); margin: 8px 0 0; }
+.draft-banner { display: flex; gap: 14px; align-items: center; justify-content: space-between;
+  background: var(--slate2); border: 1px solid var(--amber); border-left-width: 4px; border-radius: 8px;
+  padding: 12px 16px; margin: 0 0 16px; font-size: .9rem; color: var(--fog); }
+.draft-banner .btn { flex: none; }
+@media (max-width: 560px) { .draft-banner { flex-direction: column; align-items: flex-start; } }
