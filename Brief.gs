@@ -26,6 +26,7 @@
  * Other handy functions:
  *   sendIdeasEmailNow / sendMeetingBriefNow → send to the whole list right now
  *   removeClubEmails → stop the automatic sends
+ *   resendIdeasEmailToComcast → resend this cycle's ideas email to Comcast members
  */
 
 const SITE_URL = 'https://lakewood-investment-club.netlify.app/';
@@ -92,6 +93,27 @@ function targetMeeting_() {
 }
 
 /* ---------- shared bits ---------- */
+// Send through Gmail itself (GmailApp), not MailApp. MailApp mail carries a
+// "...@maestro.bounces.google.com" return address, which Comcast rejects
+// ("530 5.1.0 sender rejected"), so comcast.net members never got it.
+function sendClubMail_(m) {
+  const plain = String(m.htmlBody).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|li|h1|h2|h3|div)>/gi, '\n')
+    .replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\n{3,}/g, '\n\n').trim();
+  const options = { htmlBody: m.htmlBody, attachments: m.attachments || [], name: m.name || 'Lakewood Investors Club' };
+  if (m.bcc) options.bcc = m.bcc;
+  GmailApp.sendEmail(m.to, m.subject, plain, options);
+}
+
+// One-off: resend this cycle's ideas email straight to the given addresses.
+function resendIdeasEmailTo_(addresses) {
+  Logger.log(JSON.stringify(sendIdeasEmail_({ preview: false, onlyTo: addresses })));
+}
+// Resend the ideas email to every Comcast address in the Members tab
+// (they bounced on the first send, Nov 6, 2026).
+function resendIdeasEmailToComcast() {
+  resendIdeasEmailTo_(memberEmails_().filter(function (e) { return /@comcast\.net$/i.test(e); }));
+}
+
 function recipients_(preview) {
   const owner = Session.getEffectiveUser().getEmail();
   if (preview) return { owner: owner, bcc: [] };
@@ -170,8 +192,8 @@ function sendIdeasEmail_(opts) {
       'Have an idea of your own? Submit it on <a href="' + SITE_URL + '" style="color:' + A_ + ';">the club website</a>.</p>' +
     footer_('') + '</div>';
 
-  const r = recipients_(opts.preview);
-  MailApp.sendEmail({
+  const r = opts.onlyTo ? { owner: Session.getEffectiveUser().getEmail(), bcc: opts.onlyTo } : recipients_(opts.preview);
+  sendClubMail_({
     to: r.owner, bcc: r.bcc.join(','),
     subject: (opts.preview ? '[PREVIEW] ' : '') + 'LIC trade ideas for review: ' + meetingLong + ' meeting',
     htmlBody: html,
@@ -205,7 +227,7 @@ function sendMeetingBrief_(opts) {
   if (!opts.preview) getDocsFolder_().createFile(pdf.copyBlob().setName(pdf.getName()));
 
   const r = recipients_(opts.preview);
-  MailApp.sendEmail({
+  sendClubMail_({
     to: r.owner, bcc: r.bcc.join(','),
     subject: (opts.preview ? '[PREVIEW] ' : '') + 'LIC meeting brief: comments and discussion points for ' + meetingLong,
     htmlBody: html,
