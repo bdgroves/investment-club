@@ -327,6 +327,12 @@ function askClaudeForBrief_(key, meeting, docText, comments) {
       'looking up basic facts. Never grade, rank, or score submissions; never call one strong, weak, best, or worst; never ' +
       'tell the club to buy, sell, hold, approve, or pass. Present each journal fairly in its author\'s own framing, credit ' +
       'members by name, and turn disagreements and gaps into open questions. ' +
+      'FAIRNESS: give every journal the same even-handed treatment. Never single out a journal as thin, weak, less ' +
+      'researched, or relying on informal reasoning; never correct or contradict a member\'s wording; never suggest club ' +
+      'rules or norms prompted by one member\'s journal. If a journal is brief, simply summarize what it says and turn the ' +
+      'gaps into friendly, open questions for the member to expand on at the meeting. ' +
+      'QUOTES: put words in quotation marks only if they appear verbatim in a journal or comment. ' +
+      'Leave out political remarks or asides entirely. Count journals accurately (one per "Submitted by" line). ' +
       'FACTS: for numbers, use only the figures in the journals (auto-filled from market data on the submission date). ' +
       'You may add one plain-English sentence of well-known background on what a company does, but do not introduce new ' +
       'statistics, prices, or news. Plain language for smart adults who are not finance professionals; explain any term a ' +
