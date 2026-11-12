@@ -516,7 +516,10 @@ function cycleIdeas_(meeting) {
     return !isNaN(ts.getTime()) && dateKey_(nextMeetingDate_(ts)) === key;
   });
 }
-function ideaTitle_(t) { return String(t.ticker).toUpperCase() + (t.stock ? ' — ' + t.stock : ''); }
+function ideaTitle_(t) {
+  const tk = String(t.ticker).toUpperCase(), name = String(t.stock || '').trim();
+  return tk + (name && name.toUpperCase() !== tk ? ' — ' + name : '');
+}
 
 function tabComments_(meeting) {
   const key = dateKey_(meeting);
@@ -800,10 +803,10 @@ function sendDecisionsRequest_(opts) {
     header_('Meeting record', (opts.reminder ? 'Reminder: ' : '') + 'What did we decide on ' + meetingLong + '?') +
     '{{GREETING}}' +
     '<p style="margin:0 0 10px;">Thanks for keeping the club\'s record. Here are the ideas from the ' + meetingLong + ' meeting. ' +
-      '<strong>Just hit Reply</strong> and tell me, in plain words, what the club decided on each.</p>' +
+      '<strong>Just hit Reply</strong> and tell us, in plain words, what the club decided on each.</p>' +
     (list ? '<ul style="margin:0 0 12px;padding-left:22px;">' + list + '</ul>' : '<p><em>(No ideas were submitted for this meeting.)</em></p>') +
     '<p style="margin:0 0 6px;">For example:</p>' +
-    '<p style="margin:0 0 12px;padding:10px 14px;background:#f6f1e6;border-radius:6px;font-style:italic;">Bought 4 shares of ASML at about $1,640. Bought 10 Salesforce. Passed on Amazon. Microsoft: watch, revisit in January.</p>' +
+    '<p style="margin:0 0 12px;padding:10px 14px;background:#f6f1e6;border-radius:6px;font-style:italic;">Bought 5 shares of Acme Co. at about $50. Passed on Example Inc. Sample Corp: watch, revisit next month.</p>' +
     '<p style="margin:0 0 10px;">Shares, prices and any reasons are welcome but optional. Either of you can reply; one reply is enough, and corrections from the other are fine too.</p>' +
     '<p style="margin:0 0 4px;color:' + SOFT_ + ';font-size:14px;">A few days after the meeting, the whole club gets a short "here\'s what we decided" email built from your reply, and the decisions are saved in the club\'s records.</p>' +
     '</div>';
