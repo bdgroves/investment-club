@@ -23,6 +23,12 @@
  * Both are saved in the "Comments" tab, copied into the meeting doc under the
  * right idea, and included in the meeting-day brief.
  *
+ *  3. MORNING AFTER, ~8am — "What did we decide?" email to the officers
+ *     (Members tab Role = Secretary or Treasurer; change the Role column each
+ *     year). They just hit Reply in plain words. ~5 days after the meeting the
+ *     whole club gets a short follow-up of the decisions, and they're recorded
+ *     in the Submissions tab (Status + Notes) and a Decisions tab.
+ *
  * Uses MeetingDocs.gs (dates, docs, Members list) and Code.gs (SYNTH_MODEL,
  * ANTHROPIC_API_KEY, logSynthesis).
  *
@@ -51,6 +57,7 @@ function installClubEmails() {
   ScriptApp.newTrigger('meetingDayCheck')
     .timeBased().onWeekDay(ScriptApp.WeekDay.WEDNESDAY).atHour(BRIEF_HOUR).create();
   ScriptApp.newTrigger('syncEmailReplies').timeBased().everyDays(1).atHour(18).create();
+  ScriptApp.newTrigger('afterMeetingCheck').timeBased().everyDays(1).atHour(8).create();
   // Only replies that arrive from now on count as comments (not earlier "how do I…?" emails).
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('REPLY_SYNC_SINCE')) props.setProperty('REPLY_SYNC_SINCE', String(Date.now()));
@@ -60,7 +67,7 @@ function installClubEmails() {
 }
 
 function removeClubEmails() {
-  const handlers = ['fridayIdeasCheck', 'meetingDayCheck', 'fridayBriefCheck', 'syncEmailReplies'];
+  const handlers = ['fridayIdeasCheck', 'meetingDayCheck', 'fridayBriefCheck', 'syncEmailReplies', 'afterMeetingCheck'];
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (handlers.indexOf(t.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(t);
   });
@@ -714,4 +721,221 @@ function guessIdea_(text, ideas) {
     return word.length >= 4 && new RegExp('\\b' + word.replace(/[^A-Za-z0-9]/g, '') + '\\b', 'i').test(text);
   });
   return hits.length === 1 ? hits[0] : null;
+}
+
+/* =====================================================================
+ * AFTER THE MEETING: officers record decisions by reply → club follow-up
+ * ===================================================================== */
+const DECISIONS_TAB = 'Decisions';
+const OFFICER_ROLES = ['secretary', 'treasurer'];
+
+function getDecisionsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(DECISIONS_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(DECISIONS_TAB);
+    sh.appendRow(['Received', 'Meeting Date', 'From', 'Reply', 'Email Message ID']);
+    styleHeader_(sh, 5);
+    sh.setColumnWidth(3, 160); sh.setColumnWidth(4, 480);
+  }
+  return sh;
+}
+
+// Members whose Role is Secretary or Treasurer: [{name, email, role}]
+function officers_() {
+  return getMembersSheet_().getDataRange().getValues().slice(1).filter(function (r) {
+    return String(r[1]).indexOf('@') > 0 && OFFICER_ROLES.indexOf(String(r[2]).trim().toLowerCase()) !== -1;
+  }).map(function (r) { return { name: String(r[0]).trim(), email: String(r[1]).trim(), role: String(r[2]).trim() }; });
+}
+
+// Most recent meeting strictly before today.
+function lastMeetingBefore_(now) {
+  const today = startOfDay_(now);
+  let m = nthWeekdayOfMonth_(today.getFullYear(), today.getMonth());
+  if (m >= today) m = nthWeekdayOfMonth_(today.getFullYear(), today.getMonth() - 1);
+  return m;
+}
+
+// Daily ~8am. Day 1 after a meeting: ask the officers. Day 5+ (until day 12):
+// send the club follow-up once a reply is in; one reminder if none by day 5.
+function afterMeetingCheck() {
+  const now = new Date();
+  const m = lastMeetingBefore_(now);
+  const k = dateKey_(m);
+  const days = Math.round((startOfDay_(now) - m) / 86400000);
+  const props = PropertiesService.getScriptProperties();
+  if (days >= 1 && days <= 3 && !props.getProperty('DEC_REQ_' + k)) {
+    Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: m })));
+    return;
+  }
+  if (days >= 5 && days <= 12 && props.getProperty('DEC_REQ_' + k) && !props.getProperty('DEC_SUM_' + k)) {
+    const r = sendDecisionsSummary_({ meeting: m });
+    if (r.waiting && !props.getProperty('DEC_NUDGE_' + k)) {
+      Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: m, reminder: true })));
+      props.setProperty('DEC_NUDGE_' + k, '1');
+    }
+    Logger.log(JSON.stringify(r));
+  }
+}
+
+// Manual buttons (they act on the most recent meeting).
+function previewDecisionsRequest()  { Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: lastMeetingBefore_(new Date()), preview: true }))); }
+function sendDecisionsRequestNow()  { Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: lastMeetingBefore_(new Date()) }))); }
+function previewDecisionsSummary()  { Logger.log(JSON.stringify(sendDecisionsSummary_({ meeting: lastMeetingBefore_(new Date()), preview: true }))); }
+function sendDecisionsSummaryNow()  { Logger.log(JSON.stringify(sendDecisionsSummary_({ meeting: lastMeetingBefore_(new Date()) }))); }
+
+function decisionsSubject_(meeting) { return 'LIC decisions for ' + formatLong_(meeting); }
+
+function sendDecisionsRequest_(opts) {
+  const meeting = opts.meeting;
+  const meetingLong = formatLong_(meeting);
+  const ideas = cycleIdeas_(meeting);
+  const offs = officers_();
+  if (!offs.length && !opts.preview) return { error: 'No Secretary or Treasurer in the Members tab Role column.' };
+
+  const list = ideas.map(function (t) {
+    return '<li style="margin:0 0 6px;"><strong>' + esc2_(ideaTitle_(t)) + '</strong> <span style="color:' + SOFT_ + ';">from ' + esc2_(t.member || 'a member') + '</span></li>';
+  }).join('');
+  const html = '<div style="font-family:' + F_ + ';color:' + INK_ + ';max-width:640px;font-size:15px;line-height:1.55;">' +
+    header_('Meeting record', (opts.reminder ? 'Reminder: ' : '') + 'What did we decide on ' + meetingLong + '?') +
+    '{{GREETING}}' +
+    '<p style="margin:0 0 10px;">Thanks for keeping the club\'s record. Here are the ideas from the ' + meetingLong + ' meeting. ' +
+      '<strong>Just hit Reply</strong> and tell me, in plain words, what the club decided on each.</p>' +
+    (list ? '<ul style="margin:0 0 12px;padding-left:22px;">' + list + '</ul>' : '<p><em>(No ideas were submitted for this meeting.)</em></p>') +
+    '<p style="margin:0 0 6px;">For example:</p>' +
+    '<p style="margin:0 0 12px;padding:10px 14px;background:#f6f1e6;border-radius:6px;font-style:italic;">Bought 4 shares of ASML at about $1,640. Bought 10 Salesforce. Passed on Amazon. Microsoft: watch, revisit in January.</p>' +
+    '<p style="margin:0 0 10px;">Shares, prices and any reasons are welcome but optional. Either of you can reply; one reply is enough, and corrections from the other are fine too.</p>' +
+    '<p style="margin:0 0 4px;color:' + SOFT_ + ';font-size:14px;">A few days after the meeting, the whole club gets a short "here\'s what we decided" email built from your reply, and the decisions are saved in the club\'s records.</p>' +
+    '</div>';
+
+  const subject = (opts.preview ? '[PREVIEW] ' : '') + decisionsSubject_(meeting);
+  const owner = Session.getEffectiveUser().getEmail();
+  const to = opts.preview ? [{ name: memberNameFor_(owner), email: owner }] : offs.concat([{ name: memberNameFor_(owner), email: owner }]);
+  let sent = 0;
+  to.forEach(function (m) {
+    const first = m.name ? m.name.split(/\s+/)[0] : '';
+    sendClubMail_({ to: m.email, subject: subject, htmlBody: html.replace('{{GREETING}}', '<p style="margin:0 0 12px;">' + (first ? 'Hi ' + esc2_(first) + ',' : 'Hi there,') + '</p>') });
+    sent++;
+  });
+  if (!opts.preview) PropertiesService.getScriptProperties().setProperty('DEC_REQ_' + dateKey_(meeting), String(Date.now()));
+  return { ok: true, email: 'decisions-request', reminder: !!opts.reminder, preview: !!opts.preview, ideas: ideas.length, sent: sent };
+}
+
+// Pull the officers' replies into the Decisions tab; return all for this meeting.
+function collectDecisionReplies_(meeting) {
+  const owner = String(Session.getEffectiveUser().getEmail()).toLowerCase();
+  const sheet = getDecisionsSheet_();
+  const key = dateKey_(meeting);
+  const seen = {};
+  sheet.getDataRange().getValues().slice(1).forEach(function (r) { if (r[4]) seen[String(r[4])] = true; });
+  GmailApp.search('subject:"' + decisionsSubject_(meeting) + '" newer_than:30d', 0, 20).forEach(function (th) {
+    th.getMessages().forEach(function (m) {
+      if (seen[m.getId()] || m.getSubject().indexOf('[PREVIEW]') !== -1) return;
+      const from = m.getFrom();
+      const email = ((from.match(/<([^>]+)>/) || [null, from])[1] || '').trim().toLowerCase();
+      if (!email || email === owner) return;
+      const text = cleanReply_(m.getPlainBody());
+      if (text.length < 2) return;
+      sheet.appendRow([m.getDate(), key, memberNameFor_(email) || from.replace(/<[^>]*>/, '').replace(/"/g, '').trim(), text, m.getId()]);
+      seen[m.getId()] = true;
+    });
+  });
+  return sheet.getDataRange().getValues().slice(1).filter(function (r) {
+    const k = r[1] instanceof Date ? dateKey_(r[1]) : String(r[1]);
+    return k === key && String(r[3]).trim();
+  }).map(function (r) { return { when: r[0], who: String(r[2]), text: String(r[3]) }; });
+}
+
+function sendDecisionsSummary_(opts) {
+  const meeting = opts.meeting;
+  const meetingLong = formatLong_(meeting);
+  const replies = collectDecisionReplies_(meeting);
+  if (!replies.length) return { waiting: true, note: 'No decision replies yet for ' + meetingLong + '.' };
+  const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!key) return { error: 'No ANTHROPIC_API_KEY script property.' };
+  const ideas = cycleIdeas_(meeting);
+
+  const payload = {
+    model: SYNTH_MODEL,
+    max_tokens: 2000,
+    system: 'You record the decisions of the Lakewood Investors Club, a volunteer investment club. The Secretary and/or ' +
+      'Treasurer replied by email with what the club decided. Report ONLY what they wrote: never invent shares, prices, ' +
+      'reasons or decisions, and never add opinions, advice or predictions. If two replies differ, prefer the later one ' +
+      'and say "per <name>" in the notes. Warm, plain, short.',
+    messages: [{ role: 'user', content:
+      'Meeting: ' + meetingLong + '\n\nIdeas on the agenda:\n' +
+      ideas.map(function (t) { return '- id ' + t.id + ': ' + ideaTitle_(t) + ' (brought by ' + (t.member || 'a member') + ')'; }).join('\n') +
+      '\n\nOfficer replies (oldest first):\n' +
+      replies.map(function (r) { return '--- ' + r.who + ':\n' + r.text; }).join('\n') +
+      '\n\nReturn ONLY JSON, no markdown, in this shape:\n' +
+      '{"decisions":[{"id":"<idea id or empty>","ticker":"","decision":"Bought|Sold|Approved|Watch|Pass|Not discussed|Other",' +
+      '"details":"shares/price/notes exactly as given, or empty"}],' +
+      '"summary_html":"2-3 short <p> paragraphs: what the club decided, crediting the member who brought each idea, and a ' +
+      'thank-you to everyone who submitted and commented. Allowed tags: p, strong, em."}\n' +
+      'Include one entry per agenda idea (use "Not discussed" if the replies don\'t mention it), plus entries for any other ' +
+      'stocks the replies mention (empty id).'
+    }]
+  };
+  const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post', contentType: 'application/json',
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    payload: JSON.stringify(payload), muteHttpExceptions: true
+  });
+  const body = JSON.parse(res.getContentText());
+  if (res.getResponseCode() !== 200) return { error: 'Claude API ' + res.getResponseCode() + ': ' + ((body.error && body.error.message) || 'request failed') };
+  const raw = (body.content || []).map(function (b) { return b.text || ''; }).join('');
+  let out;
+  try { out = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
+  catch (e) { return { error: 'Could not read the decisions: ' + raw.slice(0, 300) }; }
+  const decisions = out.decisions || [];
+  const summary = String(out.summary_html || '').replace(/<(?!\/?(p|strong|em)\b)[^>]*>/gi, '');
+
+  // Record in the Submissions tab (Status + Notes), unless previewing.
+  if (!opts.preview) {
+    const sheet = getSheet();
+    const data = sheet.getDataRange().getValues();
+    const statusCol = HEADERS.indexOf('Status') + 1, notesCol = HEADERS.indexOf('Notes') + 1;
+    const when = Utilities.formatDate(meeting, tz_(), 'MMM d, yyyy');
+    decisions.forEach(function (d) {
+      if (!d.id) return;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) !== String(d.id)) continue;
+        const dec = String(d.decision || '');
+        const status = /bought|approved/i.test(dec) ? 'approved' : /watch/i.test(dec) ? 'watch' : /pass/i.test(dec) ? 'pass' : data[i][statusCol - 1];
+        sheet.getRange(i + 1, statusCol).setValue(status);
+        sheet.getRange(i + 1, notesCol).setValue(when + ' meeting: ' + dec + (d.details ? ' (' + d.details + ')' : ''));
+      }
+    });
+  }
+
+  const titleFor = function (d) {
+    const t = ideas.filter(function (x) { return String(x.id) === String(d.id); })[0];
+    return t ? { title: ideaTitle_(t), by: t.member || '' } : { title: String(d.ticker || ''), by: '' };
+  };
+  const rows = decisions.map(function (d) {
+    const t = titleFor(d);
+    return '<tr><td style="padding:8px 10px;border-bottom:1px solid ' + LINE_ + ';"><strong>' + esc2_(t.title) + '</strong>' +
+      (t.by ? '<br><span style="color:' + SOFT_ + ';font-size:13px;">from ' + esc2_(t.by) + '</span>' : '') + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid ' + LINE_ + ';font-weight:bold;color:' + A_ + ';">' + esc2_(d.decision || '') + '</td>' +
+      '<td style="padding:8px 10px;border-bottom:1px solid ' + LINE_ + ';color:' + INK_ + ';">' + esc2_(d.details || '') + '</td></tr>';
+  }).join('');
+  const recorders = replies.map(function (r) { return r.who; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(' and ');
+  const html = '<div style="font-family:' + F_ + ';color:' + INK_ + ';max-width:680px;font-size:15px;line-height:1.55;">' +
+    header_('Meeting follow-up', 'What we decided: ' + meetingLong) +
+    '{{GREETING}}' +
+    summary.replace(/<p>/g, '<p style="margin:0 0 10px;">') +
+    (rows ? '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:14px;">' +
+      '<tr><th align="left" style="padding:6px 10px;border-bottom:2px solid ' + A_ + ';">Idea</th><th align="left" style="padding:6px 10px;border-bottom:2px solid ' + A_ + ';">Decision</th><th align="left" style="padding:6px 10px;border-bottom:2px solid ' + A_ + ';">Details</th></tr>' +
+      rows + '</table>' : '') +
+    '<p style="margin:0 0 10px;color:' + SOFT_ + ';font-size:14px;">Recorded by ' + esc2_(recorders || 'the club officers') + '. ' +
+      'Next month\'s ideas are already welcome on <a href="' + SITE_URL + '" style="color:' + A_ + ';">the club website</a>.</p>' +
+    footer_('Summary prepared by AI from the officers\' notes.') + '</div>';
+
+  const r = sendToMembers_(!!opts.preview, (opts.preview ? '[PREVIEW] ' : '') + 'LIC follow-up: what we decided on ' + meetingLong, html, []);
+  if (r.error) return r;
+  if (!opts.preview) {
+    PropertiesService.getScriptProperties().setProperty('DEC_SUM_' + dateKey_(meeting), String(Date.now()));
+    try { logSynthesis('[Decisions for ' + meetingLong + ']\n\n' + summary.replace(/<[^>]+>/g, ' '), []); } catch (e) {}
+  }
+  return { ok: true, email: 'decisions-summary', preview: !!opts.preview, decisions: decisions.length, sent: r.sent, failed: r.failed };
 }
