@@ -516,6 +516,8 @@ function cycleIdeas_(meeting) {
     return !isNaN(ts.getTime()) && dateKey_(nextMeetingDate_(ts)) === key;
   });
 }
+// Exactly as MeetingDocs.gs writes the heading in the doc.
+function docTitle_(t) { return String(t.ticker).toUpperCase() + (t.stock ? ' — ' + t.stock : ''); }
 function ideaTitle_(t) {
   const tk = String(t.ticker).toUpperCase(), name = String(t.stock || '').trim();
   return tk + (name && name.toUpperCase() !== tk ? ' — ' + name : '');
@@ -636,7 +638,7 @@ function insertCommentIntoDoc_(info, idea, who, via, text) {
   const label = '💬 ' + who + ' (' + via + ', ' + when + '): ';
   let at = -1;
   if (idea) {
-    const title = ideaTitle_(idea);
+    const title = docTitle_(idea);
     const n = body.getNumChildren();
     for (let i = 0; i < n - 1 && at === -1; i++) {
       const el = body.getChild(i);
