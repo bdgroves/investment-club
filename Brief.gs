@@ -783,6 +783,15 @@ function afterMeetingCheck() {
   }
 }
 
+// Skip the after-meeting emails for the most recent meeting (no officer
+// request, no club follow-up). Run by hand; the next meeting works as normal.
+function skipDecisionsForLastMeeting() {
+  const k = dateKey_(lastMeetingBefore_(new Date()));
+  const props = PropertiesService.getScriptProperties();
+  ['DEC_REQ_', 'DEC_SUM_', 'DEC_NUDGE_'].forEach(function (p) { props.setProperty(p + k, 'skipped'); });
+  Logger.log('After-meeting emails skipped for the ' + k + ' meeting.');
+}
+
 // Manual buttons (they act on the most recent meeting).
 function previewDecisionsRequest()  { Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: lastMeetingBefore_(new Date()), preview: true }))); }
 function sendDecisionsRequestNow()  { Logger.log(JSON.stringify(sendDecisionsRequest_({ meeting: lastMeetingBefore_(new Date()) }))); }
