@@ -226,8 +226,10 @@ function buildDocHeader_(body, date) {
     '(or right-click → Comment). Type your thought and click Comment. ' +
     'You can reply to someone else\'s comment the same way.\n\n' +
     'Please comment rather than editing the text, so each member\'s journal stays in their own words. ' +
-    'The Friday before the meeting, everyone is emailed these ideas to review. Everyone sees everyone\'s comments as they\'re ' +
-    'added (refresh to see the latest). On meeting day, a second email brings all the comments plus an AI summary of suggested discussion points.'
+    'No Google account? Members can also reply to the Friday email or use the comment box on the club website; ' +
+    'those comments are added here automatically, marked 💬.\n\n' +
+    'The Friday before the meeting, everyone is emailed these ideas to review. On meeting day, a second email brings ' +
+    'all the comments plus an AI summary of suggested discussion points.'
   ]]);
   how.setBorderWidth(0);
   const cell = how.getCell(0, 0).setBackgroundColor('#f6f1e6').setPaddingTop(10).setPaddingBottom(10).setPaddingLeft(14).setPaddingRight(14);

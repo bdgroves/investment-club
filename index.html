@@ -18,8 +18,8 @@
     <span>Trade Journal</span>
   </div>
   <div class="topbar-nav">
-    <a href="index.html" class="active">Submit</a>
-    <a href="review.html">Review Desk</a>
+    <a href="index.html" class="active">Submit an Idea</a>
+    <a href="ideas.html">This Month's Ideas</a>
     <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch colour theme">☾ Dark</button>
   </div>
 </nav>
@@ -27,25 +27,9 @@
 <main class="page">
   <p class="section-eyebrow">Member Submission</p>
   <h2 class="section-title">Submit a Trade</h2>
-  <p class="section-sub">Complete your homework below. Every field matters — a strong submission helps the committee make a fast, well-informed decision.</p>
-  <div class="help-row">
-    <a class="help-card" href="How-to-Submit-a-Trade-Journal.pdf" download>
-      <span class="help-icon">⤓</span>
-      <span><strong>Download the how-to (PDF)</strong><small>9 steps with pictures. Print it or keep it handy.</small></span>
-    </a>
-    <a class="help-card" href="How-to-Comment-in-the-Meeting-Doc.pdf" download>
-      <span class="help-icon">⤓</span>
-      <span><strong>How to comment (PDF)</strong><small>Leave your thoughts in the meeting doc, on a computer or iPad.</small></span>
-    </a>
-    <a class="help-card" href="guide.html" target="_blank">
-      <span class="help-icon">?</span>
-      <span><strong>What does each box mean?</strong><small>The quick plain-English guide.</small></span>
-    </a>
-    <a class="help-card" id="meeting-doc-card" href="#" target="_blank" rel="noopener" style="display:none;">
-      <span class="help-icon">✎</span>
-      <span><strong id="meeting-doc-title">Next meeting's discussion doc</strong><small id="meeting-doc-sub">Read the journals and leave comments.</small></span>
-    </a>
-  </div>
+  <p class="section-sub">Fill in what you can. Only three things are required: the stock symbol, your name, and a sentence or two on why you like it.</p>
+  <p class="help-line">New here? <a href="How-to-Submit-a-Trade-Journal.pdf" download>Read the 2-minute how-to (PDF)</a>
+    <span class="sep">·</span> <a href="ideas.html">See this month's ideas and add a comment &rarr;</a></p>
 
   <div id="confirm-panel" class="confirm-panel" style="display:none;"></div>
   <div id="draft-banner" class="draft-banner" style="display:none;"></div>
@@ -395,13 +379,6 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  loadMeetingDoc(function (d) {
-    if (!d || !d.url) return;
-    var card = document.getElementById('meeting-doc-card');
-    card.href = d.url;
-    document.getElementById('meeting-doc-title').textContent = 'Discussion doc for ' + d.meetingDate.replace(/^\w+, /, '').replace(/, \d{4}$/, '');
-    card.style.display = '';
-  });
 
   function submitTrade() {
     const ticker = val('f-ticker').toUpperCase();
@@ -456,11 +433,11 @@
       '<div class="confirm-check">✓</div>' +
       '<div class="confirm-body">' +
         '<div class="confirm-title">Got it! Your ' + ticker + ' trade is in.</div>' +
-        '<div class="confirm-text">The committee will see it before the next meeting. ' +
+        '<div class="confirm-text">It\'s now in this month\'s discussion doc, and it\'ll be in the Friday email to the club. ' +
         'Thanks for doing your homework — every submission makes the club smarter.</div>' +
         '<div class="confirm-actions">' +
           '<button type="button" class="btn btn-ghost btn-sm" onclick="dismissConfirm()">Submit another</button> ' +
-          '<a class="btn btn-ghost btn-sm" href="review.html">Go to the Review Desk →</a>' +
+          '<a class="btn btn-ghost btn-sm" href="ideas.html">See this month\'s ideas →</a>' +
         '</div>' +
       '</div>';
     panel.style.display = 'flex';

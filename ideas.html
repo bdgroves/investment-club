@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Club — This Month's Ideas</title>
+  <link rel="stylesheet" href="style.css">
+<script>try{if(localStorage.getItem('ic_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<style>
+  .idea { background: var(--slate2); border: 1px solid var(--slate4); border-radius: 10px; padding: 20px 22px; margin: 0 0 22px; }
+  .idea-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  .idea-ticker { font-size: 1.35rem; font-weight: 700; color: var(--amber); }
+  .idea-name { font-size: 1.05rem; color: var(--fog); font-weight: 600; }
+  .idea-by { width: 100%; font-size: .85rem; color: var(--mist); margin-top: 2px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0; padding: 10px 12px; background: var(--slate3); border-radius: 6px; font-size: .85rem; color: var(--mist); }
+  .facts b { color: var(--fog); font-weight: 600; }
+  .idea h4 { margin: 14px 0 3px; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--amber); }
+  .idea p.txt { margin: 0; color: var(--fog); white-space: pre-line; line-height: 1.55; }
+  details.more { margin-top: 8px; }
+  details.more summary { cursor: pointer; color: var(--amber); font-weight: 600; font-size: .9rem; padding: 6px 0; }
+  .comments { margin-top: 16px; border-top: 1px solid var(--slate4); padding-top: 12px; }
+  .comments-title { font-size: .95rem; font-weight: 700; color: var(--fog); margin-bottom: 8px; }
+  .cmt { border-left: 3px solid var(--slate4); padding: 2px 0 2px 12px; margin: 0 0 10px; color: var(--fog); }
+  .cmt .who { font-weight: 700; }
+  .cmt .via { color: var(--mist); font-size: .8rem; margin-left: 4px; }
+  .cmt .rep { margin: 4px 0 0 14px; font-size: .92rem; }
+  .none { color: var(--mist); font-style: italic; font-size: .9rem; margin: 0 0 10px; }
+  .addc { margin-top: 10px; display: grid; gap: 8px; }
+  .addc input, .addc textarea { width: 100%; }
+  .addc .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .addc .note { font-size: .8rem; color: var(--mist); }
+  .status-box { padding: 16px; color: var(--mist); }
+  .other-ways { background: var(--slate2); border: 1px solid var(--slate4); border-left: 4px solid var(--amber); border-radius: 8px; padding: 12px 16px; margin: 0 0 22px; font-size: .92rem; color: var(--fog); }
+  .other-ways a { color: var(--amber); font-weight: 600; }
+</style>
+</head>
+<body>
+<a class="bg-home" href="https://brooksgroves.com/">&larr; brooksgroves.com</a>
+<style>.bg-home{display:block;position:relative;z-index:50;padding:8px 16px 0;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;color:inherit;opacity:.65;text-decoration:none;width:max-content}.bg-home:hover{opacity:1;text-decoration:underline}</style>
+
+<nav class="topbar">
+  <div class="topbar-brand">
+    <h1>Investment Club</h1>
+    <span class="divider">|</span>
+    <span>Trade Journal</span>
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html">Submit an Idea</a>
+    <a href="ideas.html" class="active">This Month's Ideas</a>
+    <button type="button" class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch colour theme">☾ Dark</button>
+  </div>
+</nav>
+
+<main class="page">
+  <p class="section-eyebrow" id="meeting-line">This month</p>
+  <h2 class="section-title">This Month's Ideas</h2>
+  <p class="section-sub">Read what members have submitted, and add your thoughts under any idea. No Google account needed: just your name and your comment.</p>
+
+  <div class="other-ways" id="other-ways">
+    Other ways to comment: <strong>reply to the Friday club email</strong>, or
+    <a id="doc-link" href="#" target="_blank" rel="noopener" style="display:none;">open the Google Doc</a><span id="doc-or" style="display:none;"> if you use Google</span>.
+    Everything ends up in the same place and in the meeting-day email.
+  </div>
+
+  <div id="ideas"><div class="status-box">Loading this month's ideas…</div></div>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+<script>
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function money(v) { var s = String(v == null ? '' : v).trim(); return !s ? '' : (/^[\d.,]+$/.test(s) ? '$' + s : s); }
+  function savedName() { try { return localStorage.getItem('ic_name') || ''; } catch (e) { return ''; } }
+
+  function commentHtml(c) {
+    var h = '<div class="cmt"><span class="who">' + esc(c.who) + '</span><span class="via">(' + esc(c.via || '') + ')</span><br>' + esc(c.text);
+    (c.replies || []).forEach(function (r) { h += '<div class="rep"><span class="who">' + esc(r.who) + ':</span> ' + esc(r.text) + '</div>'; });
+    return h + '</div>';
+  }
+  function section(label, text) {
+    return String(text || '').trim() ? '<h4>' + label + '</h4><p class="txt">' + esc(text) + '</p>' : '';
+  }
+
+  function ideaHtml(i) {
+    var facts = [];
+    if (i.price) facts.push('Price <b>' + esc(money(i.price)) + '</b>');
+    if (i.low52 || i.high52) facts.push('1-yr range <b>' + esc(money(i.low52)) + '–' + esc(money(i.high52)) + '</b>');
+    if (i.pe) facts.push('P/E <b>' + esc(i.pe) + '</b>');
+    if (i.dividend && Number(i.dividend) > 0) facts.push('Dividend <b>' + esc(money(i.dividend)) + (i.dividendFreq ? ' ' + esc(i.dividendFreq) : '') + '</b>');
+    if (i.growthIncome) facts.push('<b>' + esc(i.growthIncome) + '</b>');
+    if (i.sector) facts.push(esc(i.sector));
+    var more = section('Competitive moat', i.moat) + section('Why now', i.whyNow) + section('Pros', i.pros) +
+               section('Cons', i.cons) + section('Trade management', i.management);
+    var h = '<div class="idea" id="idea-' + esc(i.id) + '">' +
+      '<div class="idea-head"><span class="idea-ticker">' + esc(i.ticker) + '</span><span class="idea-name">' + esc(i.stock) + '</span>' +
+      '<span class="idea-by">Submitted by ' + esc(i.member || 'a member') + (i.submitted ? ' · ' + esc(i.submitted) : '') + '</span></div>' +
+      (facts.length ? '<div class="facts">' + facts.join('<span>·</span>') + '</div>' : '') +
+      section('How it landed on the radar', i.whyPicked) + section('Core thesis', i.thesis) +
+      (more ? '<details class="more"><summary>Read the rest of the journal</summary>' + more + '</details>' : '') +
+      '<div class="comments"><div class="comments-title">Comments</div><div class="list">' +
+      (i.comments.length ? i.comments.map(commentHtml).join('') : '<p class="none">No comments yet. Be the first!</p>') +
+      '</div>' +
+      '<form class="addc" onsubmit="return addComment(event, \'' + esc(i.id) + '\')">' +
+        '<input type="text" name="name" maxlength="60" placeholder="Your name" value="' + esc(savedName()) + '" required>' +
+        '<textarea name="text" rows="3" maxlength="2000" placeholder="Your thoughts on ' + esc(i.ticker) + '. A question, a concern, or why you like it." required></textarea>' +
+        '<div class="row"><button type="submit" class="btn btn-primary">Add my comment</button>' +
+        '<span class="note">It also goes into the meeting doc and the meeting-day email.</span></div>' +
+      '</form></div></div>';
+    return h;
+  }
+
+  function render(d) {
+    var box = document.getElementById('ideas');
+    if (d.error) { box.innerHTML = '<div class="status-box">Couldn’t load the ideas just now (' + esc(d.error) + '). Please refresh in a minute.</div>'; return; }
+    if (d.meetingDate) document.getElementById('meeting-line').textContent = 'For our meeting on ' + d.meetingDate;
+    if (d.docUrl) {
+      var a = document.getElementById('doc-link'); a.href = d.docUrl; a.style.display = '';
+      document.getElementById('doc-or').style.display = '';
+    }
+    var ideas = d.ideas || [];
+    if (!ideas.length) {
+      box.innerHTML = '<div class="status-box">No ideas submitted for this meeting yet. <a href="index.html" style="color:var(--amber);font-weight:600;">Be the first to submit one &rarr;</a></div>';
+      return;
+    }
+    var h = ideas.map(ideaHtml).join('');
+    if ((d.general || []).length) {
+      h += '<div class="idea"><div class="idea-head"><span class="idea-name">General comments</span></div><div class="comments">' +
+           d.general.map(commentHtml).join('') + '</div></div>';
+    }
+    box.innerHTML = h;
+    if (location.hash) { var el = document.querySelector(location.hash); if (el) el.scrollIntoView(); }
+  }
+
+  function addComment(ev, id) {
+    ev.preventDefault();
+    var f = ev.target, btn = f.querySelector('button');
+    var nameEl = f.elements['name'], textEl = f.elements['text'];
+    var name = nameEl.value.trim(), text = textEl.value.trim();
+    if (!name || !text) return false;
+    try { localStorage.setItem('ic_name', name); } catch (e) {}
+    btn.disabled = true; btn.textContent = 'Saving…';
+    clubCall('comment', { id: id, name: name, text: text }, function (res) {
+      btn.disabled = false; btn.textContent = 'Add my comment';
+      if (res.error || !res.ok) { showToast(res.error || 'Couldn’t save your comment. Please try again.', true); return; }
+      var list = f.parentNode.querySelector('.list');
+      var none = list.querySelector('.none'); if (none) none.remove();
+      list.insertAdjacentHTML('beforeend', commentHtml({ who: name, text: text, via: 'via website' }));
+      textEl.value = '';
+      showToast('Thanks, ' + name.split(' ')[0] + '! Your comment is saved.');
+    });
+    return false;
+  }
+
+  clubCall('ideas', null, render, 40000);
+</script>
+</body>
+</html>

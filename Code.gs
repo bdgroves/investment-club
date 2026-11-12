@@ -76,6 +76,12 @@ function doGet(e) {
     catch (err) { return reply({ error: String(err) }, e); }
   }
 
+  // Club page actions (ideas list, website comments) live in Brief.gs.
+  if (typeof handleClubAction_ === 'function') {
+    const out = handleClubAction_(action, e);
+    if (out) return reply(out, e);
+  }
+
   // Writes routed through GET (JSONP) because browser no-cors POST
   // won't follow Apps Script's redirect. Payload arrives as ?data=<json>.
   if (action === 'submit' || action === 'decision') {

@@ -212,6 +212,25 @@ function loadMeetingDoc(callback) {
   document.head.appendChild(script);
 }
 
+/* ── Generic JSONP call to the backend: clubCall('ideas', null, cb) ── */
+function clubCall(action, data, callback, timeoutMs) {
+  if (!SHEET_URL) { callback({ error: 'Not connected.' }); return; }
+  const cbName = '__icC_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+  let script;
+  function cleanup() {
+    try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+  }
+  const timeout = setTimeout(function () { cleanup(); callback({ error: 'The club server took too long. Please try again.' }); }, timeoutMs || 25000);
+  window[cbName] = function (res) { clearTimeout(timeout); cleanup(); callback(res || {}); };
+  script = document.createElement('script');
+  script.src = SHEET_URL + '?action=' + encodeURIComponent(action) +
+    (data ? '&data=' + encodeURIComponent(JSON.stringify(data)) : '') +
+    '&callback=' + cbName + '&t=' + Date.now();
+  script.onerror = function () { clearTimeout(timeout); cleanup(); callback({ error: 'Could not reach the club server.' }); };
+  document.head.appendChild(script);
+}
+
 /* ── Toast ── */
 function showToast(msg, isError) {
   const el = document.getElementById('toast');

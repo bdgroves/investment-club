@@ -143,6 +143,17 @@ Brief.gs runs on a timer, so changes to it don't need a redeploy. Changes to Cod
 
 ---
 
+## November 2026 field notes → simpler setup
+
+After the first live meeting (Nov 11, 2026) the club asked for less: one page to submit, an email that says what people think, the Google Doc for discussion, the Sheet only behind the scenes. Changes:
+
+- **Website:** `index.html` is just the form plus one help line. The **Review Desk** is hidden from the menu (still at `review.html` for officers). New **This Month's Ideas** page (`ideas.html`) lists the meeting's journals with a **comment box under each idea, no Google account needed** (`?action=ideas`, `?action=comment`).
+- **Comments without Google:** members can also **reply to the Friday email**. `syncEmailReplies()` runs daily ~6pm and right before the meeting-day brief. Website and email comments are saved in the **Comments** tab, inserted into the meeting doc under the right idea (marked 💬), and included in the meeting-day brief. Only replies received after `installClubEmails` first ran count (`REPLY_SYNC_SINCE`).
+- **Junk folders:** club emails are now sent **one per member** ("Hi Ken,") through the owner's Gmail (`GmailApp`), not one Bcc blast via `MailApp` (Comcast rejected MailApp's bounce address outright).
+- **Setup after updating:** paste `Code.gs`, `MeetingDocs.gs`, `Brief.gs` → **Deploy → Manage deployments → ✏️ → New version** → run `installClubEmails` once (adds the daily reply sync).
+
+---
+
 ## AI Synthesis
 
 The **Synthesize Submissions** button on the review desk sends all submissions (including the fundamentals) to Claude and returns a summary: themes the club is converging on, the strongest theses, shared risks, contrarian outliers, and which trades deserve the most committee time.
