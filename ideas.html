@@ -32,6 +32,13 @@
   .status-box { padding: 16px; color: var(--mist); }
   .other-ways { background: var(--slate2); border: 1px solid var(--slate4); border-left: 4px solid var(--amber); border-radius: 8px; padding: 12px 16px; margin: 0 0 22px; font-size: .92rem; color: var(--fog); }
   .other-ways a { color: var(--amber); font-weight: 600; }
+  @media (max-width: 620px) {
+    .idea { padding: 16px 14px; border-radius: 8px; }
+    .idea-ticker { font-size: 1.25rem; }
+    .facts { gap: 4px 14px; }
+    .addc .row .btn { width: 100%; justify-content: center; min-height: 48px; }
+    .cmt .rep { margin-left: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -57,8 +64,8 @@
   <p class="section-sub">Read what members have submitted, and add your thoughts under any idea. No Google account needed: just your name and your comment.</p>
 
   <div class="other-ways" id="other-ways">
-    Other ways to comment: <strong>reply to the Friday club email</strong>, or
-    <a id="doc-link" href="#" target="_blank" rel="noopener" style="display:none;">open the Google Doc</a><span id="doc-or" style="display:none;"> if you use Google</span>.
+    Other ways to comment: <strong>reply to the Friday club email</strong><span id="doc-wrap" style="display:none;">, or
+    <a id="doc-link" href="#" target="_blank" rel="noopener">open the Google Doc</a> if you use Google</span>.
     Everything ends up in the same place and in the meeting-day email.
   </div>
 
@@ -116,8 +123,8 @@
     if (d.error) { box.innerHTML = '<div class="status-box">Couldn’t load the ideas just now (' + esc(d.error) + '). Please refresh in a minute.</div>'; return; }
     if (d.meetingDate) document.getElementById('meeting-line').textContent = 'For our meeting on ' + d.meetingDate;
     if (d.docUrl) {
-      var a = document.getElementById('doc-link'); a.href = d.docUrl; a.style.display = '';
-      document.getElementById('doc-or').style.display = '';
+      document.getElementById('doc-link').href = d.docUrl;
+      document.getElementById('doc-wrap').style.display = '';
     }
     var ideas = d.ideas || [];
     if (!ideas.length) {

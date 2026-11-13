@@ -803,3 +803,51 @@ select option { background: var(--slate2); }
 .help-line a { color: var(--amber); font-weight: 600; text-decoration: none; }
 .help-line a:hover { text-decoration: underline; }
 .help-line .sep { margin: 0 6px; color: var(--steel); }
+
+/* Submit row under the form */
+.submit-row { display: flex; align-items: center; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+#submit-status { font-size: .82rem; color: var(--mist); }
+
+/* Dropdowns: show an arrow so they don't look like plain text boxes */
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--mist) 50%), linear-gradient(135deg, var(--mist) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+/* ── Phones (iPhone, Android) ── */
+@media (max-width: 620px) {
+  /* Header: brand on one line, the two pages as big tabs underneath */
+  .topbar { height: auto; flex-wrap: wrap; padding: 8px 14px 0; gap: 4px; }
+  .topbar { position: sticky; }
+  .topbar-brand { width: 100%; gap: 8px; min-height: 30px; align-items: center; padding-right: 80px; }
+  .topbar-brand h1 { font-size: .8rem; white-space: nowrap; }
+  .topbar-brand span { font-size: .72rem; white-space: nowrap; }
+  .topbar-nav { width: 100%; display: flex; align-items: stretch; gap: 0; }
+  .topbar-nav a { flex: 1; text-align: center; font-size: .82rem; padding: 12px 6px; border-radius: 0;
+    border-bottom: 3px solid transparent; display: flex; align-items: center; justify-content: center; }
+  .topbar-nav a.active { border-bottom-color: var(--amber); background: transparent; }
+  .theme-toggle { position: absolute; top: 8px; right: 14px; margin: 0; padding: 4px 10px; font-size: .75rem; }
+  .bg-home { padding: 6px 14px 0 !important; }
+
+  .page { padding: 20px 14px 56px; }
+  .section-title { font-size: 1.5rem; }
+  .form-block { padding: 18px 14px 16px; border-radius: 8px; }
+
+  /* 16px+ text in every box, so iPhone doesn't zoom in when you tap one; bigger tap targets */
+  input[type="text"], input[type="date"], input[type="password"], select, textarea {
+    font-size: 1rem; padding: 12px 12px; min-height: 48px;
+  }
+  select { padding-right: 34px; }
+  .num-input { font-size: 1rem !important; }
+  input[type="date"] { -webkit-appearance: none; display: block; line-height: 1.3; }
+
+  .btn { min-height: 48px; justify-content: center; }
+  .submit-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .submit-row .btn { width: 100%; font-size: .95rem; }
+  #submit-status { text-align: center; }
+  .help-line .sep { display: none; }
+  .help-line a { display: block; padding: 6px 0; }
+}
