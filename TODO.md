@@ -46,6 +46,7 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - [ ] Optionally move the meeting docs / Sheet to a club account later (currently owned by bdgroves1970@gmail.com)
 
 ## 🗓️ Design with the group
+- [ ] Maybe later: let people edit their own website comments (same device, until the meeting-day email). Waiting to see if anyone asks (Nov 13). Until then, Brooks fixes them in the Comments tab and the Doc.
 - [ ] "Find the funds" — pair each buy with a funding decision
 - [ ] Track executed/held positions over time (Holdings Tracker sheet exists in Drive)
 - [ ] Capture spontaneous ideas raised during meetings
