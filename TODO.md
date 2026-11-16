@@ -55,7 +55,7 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - **Live Apps Script deployment:** `AKfycbw2rDPXhk1DpvrvihaEZQW-…` (V20 as of Oct 1, 2026). This is `SHEET_URL` in `app.js`. Older `AKfycbxSCx…` is dead.
 - **Only update via New *version*** (Deploy → Manage deployments → ✏️ → Version: New version → Deploy). Never "New deployment".
 - **Code.gs, MeetingDocs.gs, Brief.gs** must all exist in the Apps Script project. The repo copies are the source of truth; paste them in, Ctrl+S, then redeploy (Brief.gs alone doesn't need a redeploy — it runs on a timer).
-- **Script Properties:** `ANTHROPIC_API_KEY`, `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
+- **Script Properties:** `ANTHROPIC_API_KEY` (since Nov 16, 2026 this is the Console key named **lic-club**; its own line in Console → Usage), `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
 - **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs.
 - **Drive:** folder "LIC Meeting Docs" holds each month's doc and each meeting-day brief PDF.
 - **Don't revoke** the project's access in Google Account → Third-party apps; the whole site stops working (see README).
