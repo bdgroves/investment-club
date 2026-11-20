@@ -6,7 +6,7 @@ Everything you need to understand, run, and take ownership of the club's trade j
 
 ## 1. What it is (the 30-second version)
 
-A web app for the investment club. Members submit a structured trade idea, the submissions land in a shared Google Sheet **and in that month's meeting Google Doc**, members comment in the doc, the Friday before each meeting everyone is emailed the ideas to review, and on meeting day an AI (Claude) emails everyone all the comments plus a neutral summary of discussion points. At the meeting the committee stamps each idea (Approve / Watch / Pass) on a dashboard. Every AI report is auto-saved to the sheet as a running archive.
+A web app for the investment club. Members submit a structured trade idea, the submissions land in a shared Google Sheet **and in that month's meeting Google Doc**, members comment in the doc, the Friday before each meeting everyone is emailed the ideas to review, and on meeting day an AI (Claude) emails everyone all the comments plus a neutral summary of discussion points. Members get a private link to edit their idea until meeting morning. After the meeting the Secretary and Treasurer reply to one email with what was decided, and the club gets a short summary. (The old committee dashboard, the Review Desk, is retired and locked.)
 
 No servers, no database. Three moving parts: a **static website** (the pages), a **Google Sheet + Apps Script** (the storage and the AI call), and an **Anthropic API key** (powers the AI).
 
@@ -48,7 +48,7 @@ No servers, no database. Three moving parts: a **static website** (the pages), a
 |---|---|---|
 | **Live website** | The app members use | Netlify — `lakewood-investment-club.netlify.app` |
 | **Source code** | The files | GitHub repo `bdgroves/investment-club` |
-| **Data + backend** | Submissions, decisions, AI calls | A Google Sheet with an Apps Script project attached (owned by bdgroves1970@gmail.com for now). Tabs: Submissions, Synthesis Log, Members, Meeting Docs |
+| **Data + backend** | Submissions, decisions, AI calls | A Google Sheet with an Apps Script project attached (owned by bdgroves1970@gmail.com for now). Tabs: Submissions, Synthesis Log, Members, Meeting Docs, Comments, Decisions, Edit Links |
 | **Meeting docs** | One Google Doc per meeting + meeting-day brief PDFs | Drive folder **LIC Meeting Docs** |
 | **AI key** | Powers the synthesis | Anthropic API key, stored in the Apps Script settings |
 
@@ -68,7 +68,6 @@ The website, the sheet, and the API key are **independent**. You can move the we
 | `Brief.gs` | Apps Script: Friday ideas-for-review email and meeting-day brief (comments + AI discussion points), on weekly timers |
 | `How-to-Submit-a-Trade-Journal.pdf`, `How-to-Comment-in-the-Meeting-Doc.pdf` | Member how-tos, linked from the home page |
 | `style.css` | Shared styling |
-| `seed.html` / `seed-macro.html` | Admin tools that load example trades. Not linked from the member site — run them yourself when you want demo data. |
 | `README.md`, `PROJECT.md`, `TODO.md`, `HANDOFF.md` | Docs |
 
 ---
@@ -155,12 +154,11 @@ Easiest is Netlify's free tier, linked to GitHub so every push publishes itself:
    ```js
    const SHEET_URL = 'https://script.google.com/macros/s/…/exec';
    ```
-2. If you use the `seed-macro.html` demo loader, update the `SHEET_URL` near the top of that file too.
-3. Re-deploy the site (re-drag to Netlify, or push if you've connected a repo).
+2. Re-deploy the site (re-drag to Netlify, or push if you've connected a repo).
 
-### E. Set the review passphrase
+### E. (Optional) Turn the Review Desk back on
 
-Open `review.html`, find `const PASS = 'clubhouse'`, and change `'clubhouse'` to whatever the committee picks. Re-deploy.
+The Review Desk is off by default. To use it, add a Script Property **`REVIEW_KEY`** (any long phrase) in Apps Script → Project Settings. Committee members enter that key on `review.html`; the server checks it. Delete the property to turn it off again. No redeploy needed.
 
 ---
 
@@ -168,7 +166,8 @@ Open `review.html`, find `const PASS = 'clubhouse'`, and change `'clubhouse'` to
 
 - **Members** open the site, fill out the form, submit. Their trade appears in the sheet, on the review desk, and in the month's meeting doc.
 - **Before the meeting** members comment in the meeting doc (link on the home page). The Friday before, everyone on the Members tab gets the ideas to review; on meeting day, all the comments plus AI discussion points.
-- **The committee** opens `review.html`, enters the passphrase, and reviews. Each card gets **Approve / Watch / Pass** plus a notes box. Hit **↻ Refresh** to pull the latest.
+- **Members who need to fix an idea** click the **Edit my idea** button in the email they got after submitting (edits close 7 am meeting day).
+- **(Retired) The committee** could open `review.html` with the `REVIEW_KEY` and review. Each card gets **Approve / Watch / Pass** plus a notes box. Hit **↻ Refresh** to pull the latest.
 - **Synthesis:** click **Synthesize**. After a few seconds you get a committee-style briefing. Use **⭳ Download report** for a clean formatted copy, or **⧉ Copy** for the raw text. Every run also auto-saves to the **Synthesis Log** tab.
 - **Starting a fresh cycle:** nothing to do — the next submission after a meeting automatically starts next month's doc. Old rows in `Submissions` can stay or be deleted (keep the header). The `Synthesis Log` and the LIC Meeting Docs folder are your history — leave them alone.
 
@@ -196,7 +195,9 @@ No monthly minimums, no servers. The only metered cost is the AI, and it's tiny 
 - **Don't revoke the project in Google Account → Third-party apps.** It runs as its owner; removing that access breaks the whole site until someone re-authorizes (open Apps Script, run any function, Allow). Name the project something recognizable ("LIC Trade Journal backend").
 - **Paste, save, *then* deploy.** A deploy only includes code that was saved (Ctrl+S). If the website behaves like the old version, check that the file in the editor really is the new one.
 - **Google Docs gotchas** (already handled in MeetingDocs.gs, noted for future edits): `Paragraph.setText()` returns nothing, so don't chain off it; appended text inherits the previous paragraph's bold/size, so set them explicitly; a doc's last paragraph can't be removed.
-- **The seed loaders write real rows.** `seed.html` / `seed-macro.html` push example trades into the live sheet. Handy for demos; just delete the rows afterward, and don't link them from the member-facing site.
+- **The web app is public, so it guards itself** (rate limits, ticker checks, Review Desk key). See README → Security. If a member ever sees "busy right now," a limit was hit; it resets within the hour.
+- **Edit Links tab = private codes.** Anyone with a code can edit that idea. Don't share the Sheet.
+- **Test with a throwaway idea, then clean up three places:** the Submissions row, the Edit Links row, and its section in the meeting doc.
 
 ---
 
@@ -213,7 +214,7 @@ Handing this to the club? Two levels:
 - [ ] Club creates its own Google Sheet + Apps Script with all three .gs files (Section 6A), and turns on the club emails (6C2)
 - [ ] Club creates its own Anthropic API key (Section 6B) and Finnhub API key (Section 6B2)
 - [ ] Club hosts the site (Section 6C) and sets its own `SHEET_URL` (6D)
-- [ ] Club sets its own passphrase (6E)
+- [ ] (Optional) Club sets a `REVIEW_KEY` if it wants the Review Desk (6E)
 - [ ] Confirm the loop end-to-end: submit a test trade → it lands in the sheet and the meeting doc → shows on the review desk → `previewIdeasEmail` and `previewMeetingBrief` arrive → synthesis returns and logs
 
 Once the last box is checked, the builder can walk away and nothing breaks. That's the whole point.

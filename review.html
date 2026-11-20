@@ -16,11 +16,11 @@
   <div class="gate-card">
     <div class="lock">🔐</div>
     <h2>Review Desk</h2>
-    <p>Committee access only.<br>Enter the passphrase to continue.</p>
-    <input type="password" id="gate-input" placeholder="passphrase" onkeydown="if(event.key==='Enter') unlock()">
+    <p>Committee access only.<br>Enter the committee key to continue.</p>
+    <input type="password" id="gate-input" placeholder="committee key" onkeydown="if(event.key==='Enter') unlock()">
     <br>
     <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:4px;" onclick="unlock()">Enter</button>
-    <p class="gate-error" id="gate-error">Incorrect passphrase. Try again.</p>
+    <p class="gate-error" id="gate-error">That key didn't work, or the Review Desk is turned off.</p>
   </div>
 </div>
 
@@ -120,26 +120,43 @@
 
 <script src="app.js"></script>
 <script>
-  const PASS = 'clubhouse';
   let currentFilter = 'all';
   let trades = [];
 
-  /* ── Gate ── */
-  function unlock() {
-    const val = document.getElementById('gate-input').value;
-    if (val === PASS) {
-      sessionStorage.setItem('ic_auth', '1');
-      document.getElementById('gate').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      init();
-    } else {
-      document.getElementById('gate-error').style.display = 'block';
-      document.getElementById('gate-input').value = '';
-    }
+  /* ── Gate: the committee key is checked by the server (Script Property
+        REVIEW_KEY). No key set there = the Review Desk stays closed. ── */
+  function openDesk() {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    init();
   }
+  function unlock() {
+    const val = document.getElementById('gate-input').value.trim();
+    if (!val) return;
+    clubCall('checkkey', null, function (res) {
+      if (res && res.ok) {
+        try { sessionStorage.setItem('ic_review_key', val); } catch (e) {}
+        openDesk();
+      } else {
+        document.getElementById('gate-error').style.display = 'block';
+        document.getElementById('gate-input').value = '';
+      }
+    });
+  }
+  // clubCall sends ?key= only via the URL below
+  const _clubCall = clubCall;
+  clubCall = function (action, data, cb, t) {
+    if (action !== 'checkkey') return _clubCall(action, data, cb, t);
+    const cbName = '__icK_' + Date.now();
+    const sc = document.createElement('script');
+    window[cbName] = function (r) { try { delete window[cbName]; } catch (e) {} sc.remove(); cb(r || {}); };
+    sc.src = SHEET_URL + '?action=checkkey&key=' + encodeURIComponent(document.getElementById('gate-input').value.trim()) + '&callback=' + cbName;
+    sc.onerror = function () { cb({ error: 'Could not reach the club server.' }); };
+    document.head.appendChild(sc);
+  };
 
-  // Check if already authenticated
-  if (sessionStorage.getItem('ic_auth') === '1') {
+  // Already unlocked in this tab?
+  if (reviewKey()) {
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
   }

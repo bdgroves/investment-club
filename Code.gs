@@ -55,19 +55,35 @@ const HEADERS = FIELDS.map(function (f) { return f.header; });
 function doGet(e) {
   const action = e && e.parameter && e.parameter.action;
 
+  // Review Desk only (hidden since Nov 2026): these need the committee key
+  // (Script Property REVIEW_KEY). With no key set, they're simply off.
+  if (action === 'checkkey') {
+    return reply(committeeKeyOk_(e) ? { ok: true } : { error: 'That isn\u2019t the committee key.' }, e);
+  }
+  if ((action === 'synthesize' || action === 'digest' || action === 'decision') && !committeeKeyOk_(e)) {
+    return reply({ error: 'The Review Desk is turned off. (Ask Brooks.)' }, e);
+  }
+
   if (action === 'synthesize') {
+    if (!rateOk_('synth', 10, 3600)) return reply({ error: 'That was run a lot just now. Try again in an hour.' }, e);
     return reply(synthesize(), e);
   }
 
   if (action === 'lookup') {
-    return reply(lookupTicker((e.parameter.ticker || '').toUpperCase()), e);
+    const tk = (e.parameter.ticker || '').toUpperCase().trim();
+    if (!TICKER_RE.test(tk)) return reply({ error: 'Please check the symbol (letters only, like AAPL).' }, e);
+    if (!rateOk_('lookup', 150, 3600)) return reply({ error: 'Auto-fill is busy right now. Please fill in by hand or try again later.' }, e);
+    return reply(lookupTicker(tk), e);
   }
 
   if (action === 'starter') {
-    return reply(starterQuestions((e.parameter.ticker || '').toUpperCase(), e.parameter.name || ''), e);
+    const tk = (e.parameter.ticker || '').toUpperCase().trim();
+    if (!TICKER_RE.test(tk)) return reply({ error: 'Please check the symbol (letters only, like AAPL).' }, e);
+    return reply(starterQuestions(tk, String(e.parameter.name || '').slice(0, 80)), e);
   }
 
   if (action === 'digest') {
+    if (!rateOk_('digest', 5, 3600)) return reply({ error: 'The digest was just sent. Check your inbox.' }, e);
     return reply(sendDigest(), e);
   }
 
@@ -88,6 +104,7 @@ function doGet(e) {
     try {
       const payload = JSON.parse(e.parameter.data || '{}');
       if (action === 'submit') {
+        if (!rateOk_('submit', 25, 3600)) return reply({ error: 'Lots of submissions just now. Please try again later.' }, e);
         appendTrade(payload.trade || payload);
       } else {
         updateDecision(payload.id, payload.status, payload.notes);
@@ -117,10 +134,12 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     if (body.action === 'submit') {
+      if (!rateOk_('submit', 25, 3600)) return reply({ error: 'Lots of submissions just now. Please try again later.' }, e);
       appendTrade(body.trade);
       return reply({ ok: true }, e);
     }
     if (body.action === 'decision') {
+      if (!committeeKeyOk_({ parameter: { key: body.key } })) return reply({ error: 'The Review Desk is turned off.' }, e);
       updateDecision(body.id, body.status, body.notes);
       return reply({ ok: true }, e);
     }
@@ -140,7 +159,7 @@ function appendTrade(t) {
     if (f.key === 'ticker')    return String(t.ticker || '').toUpperCase();
     if (f.key === 'status')    return t.status || 'pending';
     if (f.key === 'notes')     return t.notes || '';
-    return t[f.key] || '';
+    return String(t[f.key] || '').slice(0, 6000);   // a journal, not a book
   });
   sheet.appendRow(row);
 
@@ -376,6 +395,7 @@ function starterQuestions(ticker, name) {
     const cacheKey = 'starter_' + ticker;
     const hit = cache.get(cacheKey);
     if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+    if (!rateOk_('starter', 40, 3600)) return { error: 'The question helper is busy right now — go ahead and write in your own words.' };
 
     const who = name ? (name + ' (' + ticker + ')') : ticker;
 
@@ -572,6 +592,29 @@ function mapSector(ind) {
   if (has('food', 'beverage', 'tobacco', 'household', 'staple', 'grocery')) return 'Consumer Staples';
   if (has('retail', 'auto', 'apparel', 'hotel', 'restaurant', 'leisure', 'consumer', 'travel', 'luxury')) return 'Consumer Discretionary';
   return ''; // no confident match — let the member pick
+}
+
+/* ---------- guard rails (Nov 2026 security pass) ---------- */
+const TICKER_RE = /^[A-Z][A-Z0-9.\-]{0,9}$/;
+
+// At most `limit` calls per `seconds` for this bucket, across all visitors.
+// Keeps a stranger from running up AI or email use through the web app.
+function rateOk_(bucket, limit, seconds) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const k = 'rate_' + bucket + '_' + Math.floor(Date.now() / 1000 / seconds);
+    const n = Number(cache.get(k) || 0);
+    if (n >= limit) return false;
+    cache.put(k, String(n + 1), seconds + 60);
+  } catch (err) { /* if the cache hiccups, let it through */ }
+  return true;
+}
+
+// Review Desk key: Script Property REVIEW_KEY. Not set = Review Desk off.
+function committeeKeyOk_(e) {
+  const want = PropertiesService.getScriptProperties().getProperty('REVIEW_KEY');
+  const got = e && e.parameter && e.parameter.key;
+  return !!want && !!got && String(got) === String(want);
 }
 
 // Return JSON, or JSONP if ?callback= is present (lets a browser read cross-origin)

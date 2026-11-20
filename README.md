@@ -12,7 +12,6 @@ A lightweight trade submission and review system for investment clubs.
 |------|---------|
 | `index.html` | Member submission form (public) |
 | `review.html` | Committee review dashboard (passphrase-gated) |
-| `seed.html` | One-time loader for starter trades |
 | `style.css` | Shared styles |
 | `app.js` | Shared logic + storage layer |
 | `Code.gs` | Google Apps Script backend: submissions, decisions, auto-fill, synthesis, digest |
@@ -50,9 +49,7 @@ Live on **Netlify**, linked to this repo: every push to `main` publishes automat
 
 In prototype mode, trades persist in `localStorage` — per browser, survive refreshes, reset if the browser is cleared. Good enough to demo.
 
-**Review desk passphrase:** `clubhouse`
-
-**Load starter trades:** open `/seed.html` once and click "Load Starter Trades" to populate three example submissions (AMD, VRT, SPCX).
+The Review Desk (`review.html`) is retired and locked; see **Security** below.
 
 ---
 
@@ -153,6 +150,24 @@ After the first live meeting (Nov 11, 2026) the club asked for less: one page to
 - **After the meeting:** the morning after, the officers (Members tab **Role** = Secretary or Treasurer; update each year) get a "What did we decide?" email and just reply in plain words. From ~5 days after the meeting, `afterMeetingCheck` (daily ~8am) turns the reply into a short **"What we decided"** email to the whole club, records Status + Notes in Submissions, and keeps the raw replies in a **Decisions** tab. One reminder goes to the officers if nobody has replied by day 5. Manual: `sendDecisionsRequestNow`, `previewDecisionsSummary`, `sendDecisionsSummaryNow`.
 - **Setup after updating:** paste `Code.gs`, `MeetingDocs.gs`, `Brief.gs` → **Deploy → Manage deployments → ✏️ → New version** → run `installClubEmails` once (adds the daily reply sync).
 
+## Edit links (Nov 20, 2026)
+
+Members can fix an idea after submitting it. Every submission gets a private **Edit my idea** link:
+emailed to the member (their typed name is matched to the **Members** tab; an unknown name sends it to the owner to forward) and shown on the "Got it!" screen.
+The link opens the form filled in (`index.html?edit=CODE`); ticker, company and member name are locked. **Save changes** updates the Submissions row,
+adds a ✏️ "updated this idea" note under the idea in the meeting doc (nothing in the doc is overwritten, so comments stay put) and an "Updated" note on the ideas page.
+Editing closes at 7 am on meeting day. Codes live in the **Edit Links** tab, never in Submissions. Backend: `getedit` / `saveedit` actions in `Brief.gs`.
+Ideas sent in before a link existed: run `sendEditLinksForThisMonth` (all) or a one-line wrapper around `sendEditLinkFor_('LRCX')` (one).
+
+## Security (Nov 20, 2026 pass)
+
+The Apps Script web app is public ("Anyone"), so it guards itself:
+- **Review Desk actions** (`synthesize`, `digest`, `decision`) need the committee key in Script Property **`REVIEW_KEY`**. **Not set = off** (current state; the Review Desk is retired). The old hard-coded `clubhouse` passphrase is gone.
+- **Rate limits** across all visitors: submissions 25/hour, Help me get started 40 new AI calls/hour, Auto-fill 150/hour, synthesis 10/hour, digest 5/hour, website comments 40/10 min. Tickers must look like tickers; journal fields are capped at 6,000 characters.
+- **Edit links** are long random codes; the public trade list never includes them.
+- **AI spend:** the club uses its own Anthropic key (`lic-club`); the Anthropic spend limit is the backstop.
+- The demo loaders (`seed.html`, `seed-macro.html`) were removed: they wrote straight into the live Sheet.
+
 ---
 
 ## AI Synthesis
@@ -168,6 +183,6 @@ Prototype runs on the demo API key. When the club takes ownership, it uses its o
 1. Fork/duplicate the repo under the club's GitHub account
 2. Set up its own Google Sheet + Apps Script (5 min)
 3. Add its own Anthropic API key
-4. Change the passphrase in `review.html` (search `const PASS`)
+4. Optional: set a `REVIEW_KEY` Script Property if the committee ever wants the Review Desk back
 
 Everything else just works.

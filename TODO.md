@@ -1,6 +1,6 @@
 # Investment Club Trade Journal — TODO / State
 
-Live at: https://lakewood-investment-club.netlify.app (Netlify, auto-deploys from GitHub `main`) · Review passphrase: `clubhouse`
+Live at: https://lakewood-investment-club.netlify.app (Netlify, auto-deploys from GitHub `main`)
 Last updated: Oct 1, 2026
 
 ## The monthly cycle (agreed with Bob and members, Oct 1 2026)
@@ -37,7 +37,7 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - [ ] **Post-meeting follow-up**: AI summary of the meeting's investment decisions (from the Review Desk) → follow-up email/PDF to Members
 - [ ] Later (Bob's "future thoughts"): AI review of existing holdings; portfolio structure and sector composition (Holdings Tracker sheet exists)
 - [ ] Update `guide.html` + quick-guide PDF for: Help me get started, "how did this land", Dark button, meeting doc
-- [ ] Set the committee's real passphrase (replace `clubhouse` in review.html)
+- [x] Security pass (Nov 20): Review Desk locked behind Script Property `REVIEW_KEY` (unset = off; `clubhouse` removed), rate limits on submit/AI/auto-fill/digest, ticker checks, field caps, seed loaders removed
 
 ## 🧹 Housekeeping (Brooks, in Apps Script)
 - [x] Rename the project from "Untitled project" to **LIC Trade Journal backend** (Oct 1)
@@ -60,4 +60,4 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs · Comments · Decisions · Edit Links (private edit codes; never share).
 - **Drive:** folder "LIC Meeting Docs" holds each month's doc and each meeting-day brief PDF.
 - **Don't revoke** the project's access in Google Account → Third-party apps; the whole site stops working (see README).
-- Repo: `github.com/bdgroves/investment-club`. `seed.html` / `seed-macro.html` are admin-only demo loaders.
+- Repo: `github.com/bdgroves/investment-club`. Docs: README (Edit links, Security), HANDOFF (setup + gotchas).

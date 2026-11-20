@@ -20,6 +20,11 @@ function cacheTrades(trades) {
   try { localStorage.setItem('ic_trades', JSON.stringify(trades)); } catch (e) {}
 }
 
+/* Review Desk key (entered on review.html; kept for this browser tab only). */
+function reviewKey() {
+  try { return sessionStorage.getItem('ic_review_key') || ''; } catch (e) { return ''; }
+}
+
 /* ── Fire a write through JSONP (GET) — survives Apps Script's redirect,
       which a no-cors POST does not. Fire-and-forget; we don't need the reply. ── */
 function sheetWrite(paramObj) {
@@ -74,6 +79,7 @@ function updateTrade(updatedTrade) {
   if (idx !== -1) { trades[idx] = updatedTrade; cacheTrades(trades); }
 
   sheetWrite({
+    key: reviewKey(),
     action: 'decision',
     data: JSON.stringify({
       id:     updatedTrade.id,
@@ -143,7 +149,7 @@ function requestSynthesis(callback) {
   };
 
   script = document.createElement('script');
-  script.src = SHEET_URL + '?action=synthesize&callback=' + cbName + '&t=' + Date.now();
+  script.src = SHEET_URL + '?action=synthesize&key=' + encodeURIComponent(reviewKey()) + '&callback=' + cbName + '&t=' + Date.now();
   script.onerror = function () {
     clearTimeout(timeout);
     cleanup();
@@ -181,7 +187,7 @@ function requestDigest(callback) {
   const timeout = setTimeout(function () { cleanup(); callback({ error: 'That took too long — check your inbox before retrying.' }); }, 30000);
   window[cbName] = function (data) { clearTimeout(timeout); cleanup(); callback(data || {}); };
   script = document.createElement('script');
-  script.src = SHEET_URL + '?action=digest&callback=' + cbName + '&t=' + Date.now();
+  script.src = SHEET_URL + '?action=digest&key=' + encodeURIComponent(reviewKey()) + '&callback=' + cbName + '&t=' + Date.now();
   script.onerror = function () { clearTimeout(timeout); cleanup(); callback({ error: 'Could not reach the mail service.' }); };
   document.head.appendChild(script);
 }
