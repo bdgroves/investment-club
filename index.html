@@ -250,8 +250,8 @@
   </div>
 
   <div class="submit-row">
-    <button class="btn btn-primary" onclick="submitTrade()">Submit Trade for Review →</button>
-    <button type="button" class="btn btn-ghost" onclick="saveDraft(true)">Save draft</button>
+    <button class="btn btn-primary" id="submit-btn" onclick="submitTrade()">Submit Trade for Review →</button>
+    <button type="button" class="btn btn-ghost" id="draft-btn" onclick="saveDraft(true)">Save draft</button>
     <span id="submit-status"></span>
   </div>
   <p class="draft-note" id="draft-status">Not ready yet? Your work is saved automatically on this device as you type, so you can close the page and finish later.</p>
@@ -380,17 +380,17 @@
   }
 
 
-  function submitTrade() {
+  function collectTrade() {
     const ticker = val('f-ticker').toUpperCase();
     const member = val('f-member');
     const thesis = val('f-thesis');
 
     if (!ticker || !member || !thesis) {
       showToast('Please fill in Symbol, Member, and Core Thesis at minimum.', true);
-      return;
+      return null;
     }
 
-    const trade = {
+    return {
       stock:         val('f-stock'),
       date:          val('f-date'),
       ticker:        ticker,
@@ -419,8 +419,15 @@
       whyPicked:     val('f-whyPicked'),
       dataSource:    lastFillSource
     };
+  }
 
-    saveTrade(trade);
+  function submitTrade() {
+    if (EDIT_CODE) { saveEdit(); return; }
+    const trade = collectTrade();
+    if (!trade) return;
+    const ticker = trade.ticker;
+    const code = saveTrade(trade);
+    const editLink = 'index.html?edit=' + encodeURIComponent(code);
     clearDraft();
 
     FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
@@ -435,6 +442,8 @@
         '<div class="confirm-title">Got it! Your ' + ticker + ' trade is in.</div>' +
         '<div class="confirm-text">It\'s now in this month\'s discussion doc, and it\'ll be in the Friday email to the club. ' +
         'Thanks for doing your homework — every submission makes the club smarter.</div>' +
+        '<div class="confirm-text" style="margin-top:8px;">Need to change something before the meeting? We\'ve emailed you a private link, ' +
+        'or use this one (bookmark it): <a href="' + editLink + '" style="color:var(--amber);font-weight:600;">Edit my ' + ticker + ' idea</a></div>' +
         '<div class="confirm-actions">' +
           '<button type="button" class="btn btn-ghost btn-sm" onclick="dismissConfirm()">Submit another</button> ' +
           '<a class="btn btn-ghost btn-sm" href="ideas.html">See this month\'s ideas →</a>' +
@@ -525,14 +534,93 @@
     const el = document.getElementById(id);
     ['input', 'change'].forEach(function (ev) {
       el.addEventListener(ev, function () {
+        if (EDIT_CODE) return;
         draftDirty = true;
         clearTimeout(draftTimer);
         draftTimer = setTimeout(function () { saveDraft(false); }, 1200);
       });
     });
   });
-  window.addEventListener('pagehide', function () { if (draftDirty) saveDraft(false); });
-  restoreDraft();
+  window.addEventListener('pagehide', function () { if (draftDirty && !EDIT_CODE) saveDraft(false); });
+
+  /* ── Edit mode: index.html?edit=CODE (the private link from the email) ── */
+  const EDIT_CODE = new URLSearchParams(location.search).get('edit') || '';
+  const KEY_TO_ID = { whyNow: 'f-why-now' };
+  function idFor(k) { return KEY_TO_ID[k] || ('f-' + k); }
+  let editTicker = '';
+
+  function editBanner(html, isError) {
+    const b = document.getElementById('draft-banner');
+    b.innerHTML = '<div>' + html + '</div>';
+    b.style.display = 'flex';
+    b.style.borderColor = isError ? '#c0392b' : '';
+  }
+  function startEditMode() {
+    document.querySelector('.section-eyebrow').textContent = 'Member Submission · Edit';
+    document.querySelector('.section-title').textContent = 'Edit your idea';
+    document.querySelector('.section-sub').style.display = 'none';
+    document.querySelector('.help-line').style.display = 'none';
+    document.title = 'Edit your idea — Investment Club';
+    document.getElementById('submit-btn').textContent = 'Save changes';
+    document.getElementById('draft-btn').style.display = 'none';
+    setDraftStatus('Nothing is saved until you press Save changes.');
+    editBanner('Loading your idea…');
+    clubCall('getedit', { code: EDIT_CODE }, function (res) {
+      if (!res || !res.ok) {
+        editBanner('<strong>Sorry, we couldn\'t open that idea.</strong> ' + esc((res && res.error) || 'Please try again.') +
+          ' <a href="index.html" style="color:var(--amber);font-weight:600;">Submit a new idea instead</a>', true);
+        document.getElementById('submit-btn').disabled = true;
+        return;
+      }
+      const t = res.trade;
+      editTicker = (t.ticker || '').toUpperCase();
+      Object.keys(t).forEach(function (k) {
+        const el = document.getElementById(idFor(k));
+        if (el) el.value = t[k];
+      });
+      ['f-ticker', 'f-stock', 'f-member'].forEach(function (id) {
+        const el = document.getElementById(id);
+        el.readOnly = true;
+        el.style.opacity = '.7';
+        el.title = 'This stays the same. For a different stock, submit a new idea.';
+      });
+      if (!res.open) {
+        editBanner('<strong>Editing has closed for ' + esc(editTicker) + '.</strong> It closed at ' + esc(res.deadline) +
+          ', when the meeting-day email went out. You can still <a href="ideas.html" style="color:var(--amber);font-weight:600;">add a comment on the ideas page</a>.', true);
+        document.getElementById('submit-btn').disabled = true;
+        return;
+      }
+      editBanner('<strong>You\'re editing your ' + esc(editTicker) + ' idea.</strong> Change anything you like below (the symbol, company and your name stay the same), ' +
+        'then press <strong>Save changes</strong> at the bottom. You can edit until ' + esc(res.deadline) + '.');
+    });
+  }
+  function saveEdit() {
+    const trade = collectTrade();
+    if (!trade) return;
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    clubCall('saveedit', { code: EDIT_CODE, trade: trade }, function (res) {
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+      if (!res || !res.ok) { showToast((res && res.error) || 'Could not save. Please try again.', true); return; }
+      const panel = document.getElementById('confirm-panel');
+      panel.innerHTML =
+        '<div class="confirm-check">✓</div>' +
+        '<div class="confirm-body">' +
+          '<div class="confirm-title">' + (res.changed ? 'Saved! Your ' + esc(editTicker) + ' idea is updated.' : 'Nothing had changed.') + '</div>' +
+          (res.changed ? '<div class="confirm-text">What changed: ' + esc(res.summary) + '. A note about it is now under your idea in the discussion doc, ' +
+            'and the meeting-day email will use your new version.</div>' : '<div class="confirm-text">Your idea is just as it was.</div>') +
+          '<div class="confirm-actions">' +
+            '<a class="btn btn-ghost btn-sm" href="ideas.html">See this month\'s ideas →</a>' +
+          '</div>' +
+        '</div>';
+      panel.style.display = 'flex';
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 45000);
+  }
+
+  if (EDIT_CODE) startEditMode(); else restoreDraft();
 
 </script>
 </body>

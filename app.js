@@ -43,8 +43,16 @@ function sheetWrite(paramObj) {
 }
 
 /* ── Write: new submission ── */
+// Private code for the "Edit my idea" link (the server keeps it in its own tab).
+function makeEditCode() {
+  const a = new Uint8Array(12);
+  (window.crypto || window.msCrypto).getRandomValues(a);
+  return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+}
+
 function saveTrade(trade) {
   trade.id     = String(Date.now());
+  trade.editCode = trade.editCode || makeEditCode();
   trade.status = 'pending';
   trade.notes  = '';
   trade.open   = false;
@@ -56,6 +64,7 @@ function saveTrade(trade) {
 
   // shared sheet (via JSONP GET)
   sheetWrite({ action: 'submit', data: JSON.stringify({ trade: trade }) });
+  return trade.editCode;
 }
 
 /* ── Write: committee decision (status + notes) ── */
