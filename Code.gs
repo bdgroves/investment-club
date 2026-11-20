@@ -144,6 +144,14 @@ function appendTrade(t) {
   });
   sheet.appendRow(row);
 
+  // Private "Edit my idea" link, emailed to the member (Brief.gs). Never fatal.
+  try {
+    if (typeof onNewSubmission_ === 'function') onNewSubmission_({ id: row[0], timestamp: now, ticker: row[FIELDS.map(function (f) { return f.key; }).indexOf('ticker')],
+      stock: t.stock || '', member: t.member || '', editCode: t.editCode || '' });
+  } catch (err) {
+    console.error('Edit link failed: ' + err);
+  }
+
   // Also copy it into this month's meeting doc (MeetingDocs.gs).
   // A Docs hiccup must never lose a submission, so failures are only logged.
   try {

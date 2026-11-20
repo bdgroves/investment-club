@@ -483,6 +483,8 @@ function handleClubAction_(action, e) {
   try {
     if (action === 'ideas') return ideasForWeb();
     if (action === 'comment') return addWebComment(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
+    if (action === 'getedit') return getIdeaForEdit(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
+    if (action === 'saveedit') return saveIdeaEdit(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
   } catch (err) {
     return { error: String(err) };
   }
@@ -560,9 +562,17 @@ function ideasForWeb() {
       entryTarget: t.entryTarget, exit: t.exit,
       whyPicked: t.whyPicked || '', thesis: t.thesis || '', moat: t.moat || '', whyNow: t.whyNow || '',
       pros: t.pros || '', cons: t.cons || '', management: t.management || '',
+      updated: '', changes: '',
       comments: []
     };
   });
+  // "Updated Nov 20" and what changed, from the Edit Links tab
+  try {
+    editRows_().forEach(function (r) {
+      const i = ideas.filter(function (x) { return x.id === r.id; })[0];
+      if (i && r.lastEdited) { i.updated = Utilities.formatDate(new Date(r.lastEdited), tz_(), 'MMM d'); i.changes = r.lastChange; }
+    });
+  } catch (e) { console.error('Edit info unavailable: ' + e); }
   const byId = {};
   ideas.forEach(function (i) { byId[i.id] = i; });
   const general = [];
@@ -636,6 +646,17 @@ function insertCommentIntoDoc_(info, idea, who, via, text) {
   const body = doc.getBody();
   const when = Utilities.formatDate(new Date(), tz_(), 'MMM d');
   const label = '💬 ' + who + ' (' + via + ', ' + when + '): ';
+  const at = ideaEndIndex_(body, idea);
+  const para = (at >= 0 && at < body.getNumChildren()) ? body.insertParagraph(at, label + text) : body.appendParagraph(label + text);
+  para.setHeading(DocumentApp.ParagraphHeading.NORMAL);
+  setFont_(para).setFontSize(10.5).setItalic(false).setBold(false).setForegroundColor('#1b2530');
+  para.editAsText().setBold(0, label.length - 1, true).setForegroundColor(0, label.length - 1, AMBER);
+  doc.saveAndClose();
+}
+
+// Index of the paragraph that ends an idea's section in the meeting doc (its
+// rule or the next heading), body length for the last idea, -1 if not found.
+function ideaEndIndex_(body, idea) {
   let at = -1;
   if (idea) {
     const title = docTitle_(idea);
@@ -655,11 +676,7 @@ function insertCommentIntoDoc_(info, idea, who, via, text) {
       if (at === -1) at = n;   // last journal, no rule after it
     }
   }
-  const para = (at >= 0 && at < body.getNumChildren()) ? body.insertParagraph(at, label + text) : body.appendParagraph(label + text);
-  para.setHeading(DocumentApp.ParagraphHeading.NORMAL);
-  setFont_(para).setFontSize(10.5).setItalic(false).setBold(false).setForegroundColor('#1b2530');
-  para.editAsText().setBold(0, label.length - 1, true).setForegroundColor(0, label.length - 1, AMBER);
-  doc.saveAndClose();
+  return at;
 }
 
 /* ---------- replies to the Friday email ---------- */
@@ -952,4 +969,252 @@ function sendDecisionsSummary_(opts) {
     try { logSynthesis('[Decisions for ' + meetingLong + ']\n\n' + summary.replace(/<[^>]+>/g, ' '), []); } catch (e) {}
   }
   return { ok: true, email: 'decisions-summary', preview: !!opts.preview, decisions: decisions.length, sent: r.sent, failed: r.failed };
+}
+
+
+
+/* ==========================================================================
+ * EDIT LINKS (added Nov 2026, after Terry asked how to update his LRCX idea)
+ * Each submission gets a private "Edit my idea" link, emailed to the member
+ * (matched by name in the Members tab) and shown on the confirmation screen.
+ * The link opens the submit form filled in; Save updates the Submissions row,
+ * adds an "Updated" note under the idea in the meeting doc (nothing in the
+ * doc is overwritten, so comments stay put), and marks it on the ideas page.
+ * Editing closes when the meeting-day email goes out (BRIEF_HOUR, meeting day).
+ * Codes live in their own tab, never in Submissions (whose rows the site reads).
+ * ========================================================================== */
+const EDIT_TAB = 'Edit Links';
+// Fields a member can change. Ticker, company name and member stay fixed:
+// the doc and comments find an idea by them. (A different stock = new idea.)
+const EDITABLE = [
+  ['date', 'Date'], ['exchange', 'Exchange'],
+  ['shareValue', 'Price'], ['entryTarget', 'Entry target'], ['exit', 'Exit'],
+  ['high52', '52-week high'], ['low52', '52-week low'],
+  ['sector', 'Sector'], ['marketCap', 'Market cap'], ['growthIncome', 'Growth / Income'],
+  ['beta', 'Beta'], ['peRatio', 'P/E'], ['priceRevShare', 'Price / revenue per share'], ['eps', 'EPS'],
+  ['dividend', 'Dividend'], ['dividendFreq', 'Dividend frequency'],
+  ['whyPicked', 'How it landed on the radar'], ['thesis', 'Core thesis'], ['moat', 'Moat'], ['whyNow', 'Why now'],
+  ['pros', 'Pros'], ['cons', 'Cons'], ['management', 'Managing the trade']
+];
+const LONG_FIELDS = ['whyPicked', 'thesis', 'moat', 'whyNow', 'pros', 'cons', 'management'];
+
+function getEditSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(EDIT_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(EDIT_TAB);
+    sh.appendRow(['Journal ID', 'Ticker', 'Member', 'Code', 'Created', 'Emailed To', 'Last Edited', 'Last Change', 'Edits']);
+    styleHeader_(sh, 9);
+    sh.setColumnWidth(4, 200); sh.setColumnWidth(6, 220); sh.setColumnWidth(8, 420);
+  }
+  return sh;
+}
+function editRows_() {
+  return getEditSheet_().getDataRange().getValues().slice(1).map(function (r, i) {
+    return { row: i + 2, id: String(r[0]), ticker: String(r[1]), member: String(r[2]), code: String(r[3]),
+             emailedTo: String(r[5] || ''), lastEdited: r[6] || '', lastChange: String(r[7] || ''), edits: Number(r[8] || 0) };
+  });
+}
+function newEditCode_() {
+  return Utilities.getUuid().replace(/-/g, '').slice(0, 20);
+}
+function editUrl_(code) { return SITE_URL + '?edit=' + encodeURIComponent(code); }
+
+// Submissions row for a journal ID: { row, t } or null
+function findSubmission_(id) {
+  const rows = getSheet().getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(id)) {
+      const t = {};
+      FIELDS.forEach(function (f, k) { t[f.key] = rows[i][k]; });
+      return { row: i + 1, t: t };
+    }
+  }
+  return null;
+}
+// Editing closes when the meeting-day email goes out for this idea's meeting.
+function editDeadline_(t) {
+  const ts = new Date(t.timestamp);
+  const m = nextMeetingDate_(isNaN(ts.getTime()) ? new Date() : ts);
+  return new Date(m.getFullYear(), m.getMonth(), m.getDate(), BRIEF_HOUR, 0, 0);
+}
+function deadlineText_(d) { return Utilities.formatDate(d, tz_(), "h a 'on' EEEE, MMMM d").replace('AM', 'am').replace('PM', 'pm'); }
+
+// Members-tab email for a typed name: exact, then first+last, then a unique
+// first or last name. '' when unsure (the owner is told instead).
+function memberEmailForName_(name) {
+  const n = String(name || '').toLowerCase().replace(/[^a-z\s'-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!n) return '';
+  const all = getMembersSheet_().getDataRange().getValues().slice(1)
+    .filter(function (r) { return String(r[1]).indexOf('@') > 0; })
+    .map(function (r) { return { name: String(r[0]).toLowerCase().replace(/[^a-z\s'-]/g, ' ').replace(/\s+/g, ' ').trim(), email: String(r[1]).trim() }; });
+  const exact = all.filter(function (m) { return m.name === n; });
+  if (exact.length === 1) return exact[0].email;
+  const w = n.split(' '), first = w[0], last = w[w.length - 1];
+  const fl = all.filter(function (m) { const mw = m.name.split(' '); return mw[0] === first && mw[mw.length - 1] === last; });
+  if (fl.length === 1) return fl[0].email;
+  if (w.length === 1) {
+    const f1 = all.filter(function (m) { return m.name.split(' ')[0] === first; });
+    if (f1.length === 1) return f1[0].email;
+  }
+  const l1 = all.filter(function (m) { const mw = m.name.split(' '); return w.length > 1 && mw[mw.length - 1] === last; });
+  if (l1.length === 1) return l1[0].email;
+  return '';
+}
+
+// Called from Code.gs appendTrade after a new submission is saved.
+// The site makes the code (so it can show the link at once); else we do.
+function onNewSubmission_(t) {
+  const code = /^[a-z0-9]{16,40}$/i.test(String(t.editCode || '')) ? String(t.editCode) : newEditCode_();
+  const sh = getEditSheet_();
+  const exists = editRows_().some(function (r) { return r.code === code; });
+  if (exists) return;
+  sh.appendRow([String(t.id), String(t.ticker || '').toUpperCase(), String(t.member || ''), code, new Date(), '', '', '', 0]);
+  const row = sh.getLastRow();
+  try {
+    const sentTo = sendEditLinkEmail_(t, code, false);
+    sh.getRange(row, 6).setValue(sentTo);
+  } catch (err) {
+    console.error('Edit link email failed: ' + err);
+    sh.getRange(row, 6).setValue('failed: ' + err);
+  }
+}
+
+// Email the member their edit link. Unknown name → to the owner to forward.
+// Returns who it went to. preview → owner only.
+function sendEditLinkEmail_(t, code, preview) {
+  const owner = Session.getEffectiveUser().getEmail();
+  const ticker = String(t.ticker || '').toUpperCase();
+  const memberEmail = memberEmailForName_(t.member);
+  const to = preview ? owner : (memberEmail || owner);
+  const first = String(t.member || '').trim().split(/\s+/)[0] || 'there';
+  const url = editUrl_(code);
+  const deadline = deadlineText_(editDeadline_(t));
+  const note = (!preview && !memberEmail)
+    ? '<p style="background:#fff5e0;border:1px solid #f0d9a8;padding:10px 12px;border-radius:6px;font-size:14px;color:' + INK_ + ';">' +
+      '<b>For Brooks:</b> the website couldn&rsquo;t match &ldquo;' + esc2_(t.member) + '&rdquo; to the Members tab, so this came to you. ' +
+      'Please forward it to them.</p>'
+    : '';
+  const html =
+    '<div style="font-family:' + F_ + ';max-width:600px;color:' + INK_ + ';line-height:1.55;">' +
+    header_('Lakewood Investors Club', 'Your ' + esc2_(ticker) + ' idea is in') + note +
+    '<p style="font-size:16px;">Hi ' + esc2_(first) + ',</p>' +
+    '<p style="font-size:16px;">Thanks for sending in <b>' + esc2_(ticker) + (t.stock ? ' (' + esc2_(t.stock) + ')' : '') + '</b>. ' +
+    'It&rsquo;s in this month&rsquo;s discussion doc and on the ideas page.</p>' +
+    '<p style="font-size:16px;">If something changes before the meeting (a new price, a new fact, a second thought), ' +
+    'use this button to update your idea:</p>' +
+    '<p style="margin:22px 0;"><a href="' + url + '" style="background:' + A_ + ';color:#ffffff;text-decoration:none;font-weight:bold;' +
+    'font-size:17px;padding:13px 22px;border-radius:8px;display:inline-block;">Edit my ' + esc2_(ticker) + ' idea</a></p>' +
+    '<p style="font-size:14px;color:' + SOFT_ + ';">Keep this email: the button is just for you. You can make changes until <b>' + esc2_(deadline) + '</b>, ' +
+    'when the meeting-day email goes out. Everyone will see a note saying what you changed.</p>' +
+    footer_('') + '</div>';
+  sendClubMail_({ to: to, subject: 'Your ' + ticker + ' idea: edit link', htmlBody: html });
+  return to;
+}
+
+/* ---- website: ?action=getedit&data={code} ---- */
+function getIdeaForEdit(p) {
+  const r = editRows_().filter(function (x) { return x.code && x.code === String(p.code || ''); })[0];
+  if (!r) return { error: 'That edit link isn’t valid. Please use the button in your email, or ask Brooks.' };
+  const s = findSubmission_(r.id);
+  if (!s) return { error: 'That idea isn’t in the club’s list anymore. Please ask Brooks.' };
+  const deadline = editDeadline_(s.t);
+  const out = { ok: true, open: new Date() < deadline, deadline: deadlineText_(deadline), trade: {} };
+  ['ticker', 'stock', 'member'].concat(EDITABLE.map(function (e) { return e[0]; })).forEach(function (k) {
+    let v = s.t[k];
+    if (v instanceof Date) v = Utilities.formatDate(v, tz_(), 'yyyy-MM-dd');
+    out.trade[k] = v === null || v === undefined ? '' : String(v);
+  });
+  return out;
+}
+
+/* ---- website: ?action=saveedit&data={code, trade} ---- */
+function saveIdeaEdit(p) {
+  const code = String(p.code || '');
+  const incoming = p.trade || {};
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const r = editRows_().filter(function (x) { return x.code && x.code === code; })[0];
+    if (!r) return { error: 'That edit link isn’t valid. Please use the button in your email, or ask Brooks.' };
+    const s = findSubmission_(r.id);
+    if (!s) return { error: 'That idea isn’t in the club’s list anymore. Please ask Brooks.' };
+    const deadline = editDeadline_(s.t);
+    if (new Date() >= deadline) return { error: 'Editing closed at ' + deadlineText_(deadline) + ', when the meeting-day email went out. You can still add a comment on the ideas page.' };
+    if (!String(incoming.thesis || '').trim()) return { error: 'Please keep a Core thesis.' };
+
+    const sheet = getSheet();
+    const short = [], long = [];
+    EDITABLE.forEach(function (e) {
+      const k = e[0], label = e[1];
+      if (!(k in incoming)) return;
+      let oldV = s.t[k];
+      if (oldV instanceof Date) oldV = Utilities.formatDate(oldV, tz_(), 'yyyy-MM-dd');
+      oldV = String(oldV === null || oldV === undefined ? '' : oldV).trim();
+      const newV = String(incoming[k] === null || incoming[k] === undefined ? '' : incoming[k]).replace(/\r/g, '').trim().slice(0, 6000);
+      if (oldV === newV) return;
+      sheet.getRange(s.row, HEADERS.indexOf(FIELDS.filter(function (f) { return f.key === k; })[0].header) + 1).setValue(newV);
+      if (LONG_FIELDS.indexOf(k) !== -1) long.push({ label: label, text: newV });
+      else short.push(label + ' ' + (oldV || '(blank)') + ' → ' + (newV || '(blank)'));
+    });
+    if (!short.length && !long.length) return { ok: true, changed: 0, summary: 'No changes to save.' };
+
+    const summary = short.concat(long.map(function (l) { return l.label + ' rewritten'; })).join('; ');
+    const es = getEditSheet_();
+    es.getRange(r.row, 7, 1, 3).setValues([[new Date(), summary, r.edits + 1]]);
+
+    // Note under the idea in its meeting doc. Never fatal.
+    try {
+      const meeting = nextMeetingDate_(new Date(s.t.timestamp));
+      const info = findMeetingDoc_(meeting);
+      if (info) insertEditNoteIntoDoc_(info, s.t, short, long);
+    } catch (err) { console.error('Doc edit note failed: ' + err); }
+    try { CacheService.getScriptCache().remove('ideas_web'); } catch (e) {}
+    return { ok: true, changed: short.length + long.length, summary: summary };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// "✏️ Terry Roarke updated this idea (Nov 20): Price 210 → 195; ..." plus the
+// new wording of any rewritten text, at the end of that idea's doc section.
+function insertEditNoteIntoDoc_(info, t, short, long) {
+  const doc = DocumentApp.openById(info.id);
+  const body = doc.getBody();
+  const when = Utilities.formatDate(new Date(), tz_(), 'MMM d');
+  const label = '✏️ ' + (t.member || 'The member') + ' updated this idea (' + when + '): ';
+  const lines = [{ label: label, text: short.length ? short.join('; ') + (long.length ? '; and rewrote: ' : '') + (long.length ? long.map(function (l) { return l.label; }).join(', ') : '') : 'rewrote: ' + long.map(function (l) { return l.label; }).join(', ') }];
+  long.forEach(function (l) { lines.push({ label: 'New ' + l.label.toLowerCase() + ': ', text: l.text }); });
+  let at = ideaEndIndex_(body, t);
+  lines.forEach(function (ln) {
+    const para = (at >= 0 && at < body.getNumChildren()) ? body.insertParagraph(at, ln.label + ln.text) : body.appendParagraph(ln.label + ln.text);
+    para.setHeading(DocumentApp.ParagraphHeading.NORMAL);
+    setFont_(para).setFontSize(10.5).setItalic(false).setBold(false).setForegroundColor('#1b2530');
+    para.editAsText().setBold(0, ln.label.length - 1, true).setForegroundColor(0, ln.label.length - 1, AMBER);
+    if (at >= 0 && at < body.getNumChildren()) at++;
+  });
+  doc.saveAndClose();
+}
+
+/* ---- run by hand ---- */
+// See the edit-link email in your own inbox, using this cycle's first idea.
+function previewEditLinkEmail() {
+  const t = cycleIdeas_(targetMeeting_())[0];
+  if (!t) { Logger.log('No ideas this cycle to preview with.'); return; }
+  const r = editRows_().filter(function (x) { return x.id === String(t.id); })[0];
+  Logger.log('Preview sent to ' + sendEditLinkEmail_(t, r ? r.code : 'preview-only-code', true));
+}
+// One time: give every idea in this cycle an edit link and email it to its
+// member (ideas sent in before edit links existed). Safe to re-run: ideas that
+// already have a link are skipped.
+function sendEditLinksForThisMonth() {
+  const have = {};
+  editRows_().forEach(function (r) { have[r.id] = true; });
+  const done = [];
+  cycleIdeas_(targetMeeting_()).forEach(function (t) {
+    if (have[String(t.id)]) return;
+    onNewSubmission_(t);
+    done.push(String(t.ticker).toUpperCase() + ' (' + t.member + ')');
+  });
+  Logger.log(done.length ? 'Edit links sent for: ' + done.join(', ') : 'Every idea this month already has an edit link.');
 }
