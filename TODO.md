@@ -46,7 +46,8 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - [ ] Optionally move the meeting docs / Sheet to a club account later (currently owned by bdgroves1970@gmail.com)
 
 ## 🗓️ Design with the group
-- [ ] Maybe later: let people edit their own website comments (same device, until the meeting-day email). Waiting to see if anyone asks (Nov 13). Until then, Brooks fixes them in the Comments tab and the Doc.
+- [x] **Edit links for submissions** (Nov 20, 2026, after Terry asked to update LRCX; backend V22): every submission gets a private "Edit my idea" link, emailed to the member (name matched in Members; unknown names go to Brooks to forward) and shown on the confirmation screen. Edits allowed until 7 am meeting day; Submissions row updated, a ✏️ note added under the idea in the doc (nothing overwritten), "Updated" note on the ideas page. Codes live in the **Edit Links** tab. Run `sendEditLinksForThisMonth` for ideas sent before links existed, or `sendEditLinkFor_('TICKER')` via a one-line wrapper for one idea. Ticker, company and member name can't be edited.
+- [ ] Maybe later: let people edit their own website comments. Waiting to see if anyone asks (Nov 13). Until then, Brooks fixes them in the Comments tab and the Doc.
 - [ ] "Find the funds" — pair each buy with a funding decision
 - [ ] Track executed/held positions over time (Holdings Tracker sheet exists in Drive)
 - [ ] Capture spontaneous ideas raised during meetings
@@ -56,7 +57,7 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - **Only update via New *version*** (Deploy → Manage deployments → ✏️ → Version: New version → Deploy). Never "New deployment".
 - **Code.gs, MeetingDocs.gs, Brief.gs** must all exist in the Apps Script project. The repo copies are the source of truth; paste them in, Ctrl+S, then redeploy (Brief.gs alone doesn't need a redeploy — it runs on a timer).
 - **Script Properties:** `ANTHROPIC_API_KEY` (since Nov 16, 2026 this is the Console key named **lic-club**; its own line in Console → Usage), `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
-- **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs.
+- **Sheet tabs:** Submissions · Synthesis Log · Members · Meeting Docs · Comments · Decisions · Edit Links (private edit codes; never share).
 - **Drive:** folder "LIC Meeting Docs" holds each month's doc and each meeting-day brief PDF.
 - **Don't revoke** the project's access in Google Account → Third-party apps; the whole site stops working (see README).
 - Repo: `github.com/bdgroves/investment-club`. `seed.html` / `seed-macro.html` are admin-only demo loaders.
