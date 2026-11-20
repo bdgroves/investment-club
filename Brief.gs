@@ -1218,3 +1218,14 @@ function sendEditLinksForThisMonth() {
   });
   Logger.log(done.length ? 'Edit links sent for: ' + done.join(', ') : 'Every idea this month already has an edit link.');
 }
+// Send the edit link for one idea this month, by ticker, e.g. from a
+// wrapper: function sendEditLinkLRCX() { sendEditLinkFor_('LRCX'); }
+function sendEditLinkFor_(ticker) {
+  const tk = String(ticker).toUpperCase();
+  const t = cycleIdeas_(targetMeeting_()).filter(function (x) { return String(x.ticker).toUpperCase() === tk; })[0];
+  if (!t) { Logger.log('No ' + tk + ' idea this month.'); return; }
+  if (editRows_().some(function (r) { return r.id === String(t.id); })) { Logger.log(tk + ' already has an edit link.'); return; }
+  onNewSubmission_(t);
+  const r = editRows_().filter(function (x) { return x.id === String(t.id); })[0];
+  Logger.log('Edit link for ' + tk + ' (' + t.member + ') sent to ' + (r ? r.emailedTo : '?'));
+}
