@@ -53,7 +53,7 @@ Matches Bob's "Trade Journal Club Flow" (Oct 1 2026):
 - [ ] Capture spontaneous ideas raised during meetings
 
 ## 🔑 Key facts (don't lose these)
-- **Live Apps Script deployment:** `AKfycbw2rDPXhk1DpvrvihaEZQW-…` (V23 as of Nov 20, 2026: edit links + security pass). This is `SHEET_URL` in `app.js`. Older `AKfycbxSCx…` is dead.
+- **Live Apps Script deployment:** `AKfycbw2rDPXhk1DpvrvihaEZQW-…` (V24 as of Nov 21, 2026: edit links, security pass, withdraw). This is `SHEET_URL` in `app.js`. Older `AKfycbxSCx…` is dead.
 - **Only update via New *version*** (Deploy → Manage deployments → ✏️ → Version: New version → Deploy). Never "New deployment".
 - **Code.gs, MeetingDocs.gs, Brief.gs** must all exist in the Apps Script project. The repo copies are the source of truth; paste them in, Ctrl+S, then redeploy (Brief.gs alone doesn't need a redeploy — it runs on a timer).
 - **Script Properties:** `ANTHROPIC_API_KEY` (since Nov 16, 2026 this is the Console key named **lic-club**; its own line in Console → Usage), `FINNHUB_API_KEY`, optional `DIGEST_TO`, and `MEETING_DOCS_FOLDER_ID` (set automatically).
