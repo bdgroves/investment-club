@@ -595,7 +595,7 @@
         document.getElementById('submit-btn').disabled = true;
         return;
       }
-      document.getElementById('withdraw-btn').style.display = '';
+      if (res.canWithdraw) document.getElementById('withdraw-btn').style.display = '';   // only once the backend supports it
       editBanner('<strong>You\'re editing your ' + esc(editTicker) + ' idea.</strong> Change anything you like below (the symbol, company and your name stay the same), ' +
         'then press <strong>Save changes</strong> at the bottom. You can edit until ' + esc(res.deadline) + '.');
     });

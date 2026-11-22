@@ -1136,6 +1136,7 @@ function getIdeaForEdit(p) {
   if (!s) return { error: 'That idea isn’t in the club’s list anymore. Please ask Brooks.' };
   const deadline = editDeadline_(s.t);
   const out = { ok: true, open: new Date() < deadline, deadline: deadlineText_(deadline), trade: {},
+    canWithdraw: true,
     withdrawn: String(s.t.status) === WITHDRAWN,
     withdrawnOn: (String(s.t.status) === WITHDRAWN && r.lastEdited) ? Utilities.formatDate(new Date(r.lastEdited), tz_(), 'MMM d') : '' };
   ['ticker', 'stock', 'member'].concat(EDITABLE.map(function (e) { return e[0]; })).forEach(function (k) {
