@@ -592,9 +592,13 @@ function ideasForWeb() {
   const byId = {};
   ideas.forEach(function (i) { byId[i.id] = i; });
   const general = [];
+  // Comments on withdrawn ideas leave with the idea (they stay in the doc).
+  const goneIds = {}, goneTitles = [];
+  withdrawnIdeas_(meeting).forEach(function (t) { goneIds[String(t.id)] = true; goneTitles.push(docTitle_(t)); });
 
   // website + email comments
   tabComments_(meeting).forEach(function (c) {
+    if (goneIds[c.id]) return;
     const item = { who: c.who, text: c.text, via: c.via };
     if (byId[c.id]) byId[c.id].comments.push(item); else general.push(item);
   });
@@ -614,6 +618,7 @@ function ideasForWeb() {
         if (pos !== -1) starts.forEach(function (s) { if (s.at !== -1 && s.at <= pos) j = s.j; });
         const item = { who: c.who, text: c.text, via: 'in the Google Doc',
                        replies: c.replies.map(function (r) { return { who: r.who, text: r.text }; }) };
+        if (j && goneTitles.indexOf(j.title) !== -1) return;
         const idea = j ? ideas.filter(function (i) {
           return j.title.indexOf(i.ticker + ' — ') === 0 && (!i.member || i.member === j.member);
         })[0] : null;
