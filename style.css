@@ -851,3 +851,7 @@ select {
   .help-line .sep { display: none; }
   .help-line a { display: block; padding: 6px 0; }
 }
+
+/* Edit page: quiet "Withdraw this idea" button */
+.withdraw-btn { color: #b03a2e; border-color: rgba(176,58,46,.45); }
+.withdraw-btn:hover { background: rgba(176,58,46,.08); }

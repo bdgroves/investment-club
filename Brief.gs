@@ -233,7 +233,7 @@ function sendIdeasEmail_(opts) {
   const info = findMeetingDoc_(meeting);
   if (!info) return { error: 'No meeting doc yet for ' + formatLong_(meeting) + '.' };
 
-  const docText = DocumentApp.openById(info.id).getBody().getText();
+  const docText = withoutWithdrawn_(DocumentApp.openById(info.id).getBody().getText(), meeting).text;
   const journals = journalsFromDoc_(docText);
   if (!journals.length && !opts.preview) return { error: 'No journals in the doc yet; nothing sent.' };
 
@@ -285,13 +285,17 @@ function sendMeetingBrief_(opts) {
   const info = findMeetingDoc_(meeting);
   if (!info) return { error: 'No meeting doc for ' + formatLong_(meeting) + '.' };
 
-  const docText = DocumentApp.openById(info.id).getBody().getText();
+  const docText = withoutWithdrawn_(DocumentApp.openById(info.id).getBody().getText(), meeting).text;
   const journals = journalsFromDoc_(docText);
   if (!journals.length && !opts.preview) return { error: 'No journals in the doc; nothing sent.' };
 
   if (!opts.preview) { try { syncEmailReplies(); } catch (e) { console.error('Reply sync failed: ' + e); } }
-  const docText2 = DocumentApp.openById(info.id).getBody().getText();   // includes any just-synced replies
-  const comments = getDocComments_(info.id).concat(tabCommentsForBrief_(meeting));
+  const cut = withoutWithdrawn_(DocumentApp.openById(info.id).getBody().getText(), meeting);   // includes any just-synced replies
+  const docText2 = cut.text;
+  const comments = getDocComments_(info.id).filter(function (c) {
+    const q = String(c.on || '').slice(0, 80);
+    return !q || docText2.indexOf(q) !== -1 || cut.removed.indexOf(q) === -1;   // drop comments on withdrawn ideas
+  }).concat(tabCommentsForBrief_(meeting));
   const aiHtml = askClaudeForBrief_(key, meeting, docText2, comments);
   const meetingLong = formatLong_(meeting);
   const monthName = Utilities.formatDate(meeting, tz_(), 'MMMM yyyy');
@@ -485,6 +489,8 @@ function handleClubAction_(action, e) {
     if (action === 'comment') return addWebComment(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
     if (action === 'getedit') return getIdeaForEdit(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
     if (action === 'saveedit') return saveIdeaEdit(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
+    if (action === 'withdraw') return withdrawIdea(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
+    if (action === 'restore') return restoreIdea(JSON.parse((e && e.parameter && e.parameter.data) || '{}'));
   } catch (err) {
     return { error: String(err) };
   }
@@ -506,6 +512,14 @@ function getCommentsSheet_() {
 // This meeting's journals, from the Submissions tab. A submission belongs to
 // the first meeting after the day it was sent (same rule as the meeting doc).
 function cycleIdeas_(meeting) {
+  return cycleIdeasAll_(meeting).filter(function (t) { return String(t.status) !== WITHDRAWN; });
+}
+// Ideas the member withdrew (edit page → Withdraw this idea).
+function withdrawnIdeas_(meeting) {
+  return cycleIdeasAll_(meeting).filter(function (t) { return String(t.status) === WITHDRAWN; });
+}
+// Every idea for this meeting, withdrawn ones included.
+function cycleIdeasAll_(meeting) {
   const key = dateKey_(meeting);
   const rows = getSheet().getDataRange().getValues().slice(1);
   return rows.map(function (row) {
@@ -538,7 +552,9 @@ function tabComments_(meeting) {
 // In the shape commentsHtml_ / the AI prompt expect.
 function tabCommentsForBrief_(meeting) {
   const ideas = cycleIdeas_(meeting);
-  return tabComments_(meeting).map(function (c) {
+  const gone = {};
+  withdrawnIdeas_(meeting).forEach(function (t) { gone[String(t.id)] = true; });
+  return tabComments_(meeting).filter(function (c) { return !gone[c.id]; }).map(function (c) {
     const idea = ideas.filter(function (t) { return String(t.id) === c.id; })[0];
     return { who: c.who, text: c.text, on: '', replies: [], via: c.via, title: idea ? ideaTitle_(idea) : '' };
   });
@@ -1119,7 +1135,9 @@ function getIdeaForEdit(p) {
   const s = findSubmission_(r.id);
   if (!s) return { error: 'That idea isn’t in the club’s list anymore. Please ask Brooks.' };
   const deadline = editDeadline_(s.t);
-  const out = { ok: true, open: new Date() < deadline, deadline: deadlineText_(deadline), trade: {} };
+  const out = { ok: true, open: new Date() < deadline, deadline: deadlineText_(deadline), trade: {},
+    withdrawn: String(s.t.status) === WITHDRAWN,
+    withdrawnOn: (String(s.t.status) === WITHDRAWN && r.lastEdited) ? Utilities.formatDate(new Date(r.lastEdited), tz_(), 'MMM d') : '' };
   ['ticker', 'stock', 'member'].concat(EDITABLE.map(function (e) { return e[0]; })).forEach(function (k) {
     let v = s.t[k];
     if (v instanceof Date) v = Utilities.formatDate(v, tz_(), 'yyyy-MM-dd');
@@ -1142,6 +1160,7 @@ function saveIdeaEdit(p) {
     const deadline = editDeadline_(s.t);
     if (new Date() >= deadline) return { error: 'Editing closed at ' + deadlineText_(deadline) + ', when the meeting-day email went out. You can still add a comment on the ideas page.' };
     if (!String(incoming.thesis || '').trim()) return { error: 'Please keep a Core thesis.' };
+    if (String(s.t.status) === WITHDRAWN) return { error: 'This idea is withdrawn. Press "Put it back" first if you want to change it.' };
 
     const sheet = getSheet();
     const short = [], long = [];
@@ -1228,4 +1247,105 @@ function sendEditLinkFor_(ticker) {
   onNewSubmission_(t);
   const r = editRows_().filter(function (x) { return x.id === String(t.id); })[0];
   Logger.log('Edit link for ' + tk + ' (' + t.member + ') sent to ' + (r ? r.emailedTo : '?'));
+}
+
+
+/* ==========================================================================
+ * WITHDRAW (added Nov 21, 2026, after Terry asked about deleting an idea)
+ * On the edit page: "Withdraw this idea" (and "Put it back" until editing
+ * closes). Withdrawn = Status "Withdrawn" in Submissions: off the ideas page,
+ * the Friday email, the meeting-day email and the decisions emails. In the
+ * meeting doc the idea is crossed out with a note, never deleted, so other
+ * members' comments aren't lost.
+ * ========================================================================== */
+const WITHDRAWN = 'Withdrawn';
+
+// Doc text minus withdrawn ideas' sections. { text, removed }
+function withoutWithdrawn_(docText, meeting) {
+  const gone = withdrawnIdeas_(meeting);
+  if (!gone.length) return { text: docText, removed: '' };
+  const starts = [];
+  const re = /\n([^\n]+)\nSubmitted by /g;
+  let m;
+  while ((m = re.exec('\n' + docText)) !== null) starts.push({ title: m[1].trim(), at: Math.max(0, m.index - 1) });
+  const cuts = [];
+  gone.forEach(function (t) {
+    const title = docTitle_(t);
+    starts.forEach(function (st, i) {
+      if (st.title === title) cuts.push([st.at, i + 1 < starts.length ? starts[i + 1].at : docText.length]);
+    });
+  });
+  cuts.sort(function (a, b) { return b[0] - a[0]; });
+  let text = docText, removed = '';
+  cuts.forEach(function (c) { removed += text.slice(c[0], c[1]); text = text.slice(0, c[0]) + text.slice(c[1]); });
+  return { text: text, removed: removed };
+}
+
+function editLinkAndIdea_(code) {
+  const r = editRows_().filter(function (x) { return x.code && x.code === String(code || ''); })[0];
+  if (!r) return { error: 'That edit link isn’t valid. Please use the button in your email, or ask Brooks.' };
+  const s = findSubmission_(r.id);
+  if (!s) return { error: 'That idea isn’t in the club’s list anymore. Please ask Brooks.' };
+  const deadline = editDeadline_(s.t);
+  if (new Date() >= deadline) return { error: 'Changes closed at ' + deadlineText_(deadline) + ', when the meeting-day email went out.' };
+  return { r: r, s: s };
+}
+function setStatus_(row, value) {
+  getSheet().getRange(row, HEADERS.indexOf('Status') + 1).setValue(value);
+}
+
+// Cross out (or un-cross) the idea's heading and add a note at the end of its section.
+function markIdeaInDoc_(t, withdrawn) {
+  const info = findMeetingDoc_(nextMeetingDate_(new Date(t.timestamp)));
+  if (!info) return;
+  const doc = DocumentApp.openById(info.id);
+  const body = doc.getBody();
+  const title = docTitle_(t);
+  const paras = body.getParagraphs();
+  for (let i = 0; i < paras.length; i++) {
+    if (paras[i].getText().trim() === title) { paras[i].editAsText().setStrikethrough(withdrawn); break; }
+  }
+  const when = Utilities.formatDate(new Date(), tz_(), 'MMM d');
+  const label = withdrawn
+    ? '🚫 ' + (t.member || 'The member') + ' withdrew this idea (' + when + '). '
+    : '↩️ ' + (t.member || 'The member') + ' put this idea back (' + when + '). ';
+  const text = withdrawn ? 'It won’t be on the meeting agenda. Comments above are kept for the record.' : 'It’s back on the meeting agenda.';
+  const at = ideaEndIndex_(body, t);
+  const para = (at >= 0 && at < body.getNumChildren()) ? body.insertParagraph(at, label + text) : body.appendParagraph(label + text);
+  para.setHeading(DocumentApp.ParagraphHeading.NORMAL);
+  setFont_(para).setFontSize(10.5).setItalic(false).setBold(false).setStrikethrough(false).setForegroundColor('#1b2530');
+  para.editAsText().setBold(0, label.length - 1, true).setForegroundColor(0, label.length - 1, withdrawn ? '#b03a2e' : AMBER);
+  doc.saveAndClose();
+}
+
+/* ---- website: ?action=withdraw&data={code} ---- */
+function withdrawIdea(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const x = editLinkAndIdea_(p.code);
+    if (x.error) return x;
+    if (String(x.s.t.status) === WITHDRAWN) return { ok: true, already: true };
+    setStatus_(x.s.row, WITHDRAWN);
+    getEditSheet_().getRange(x.r.row, 7, 1, 3).setValues([[new Date(), 'Withdrawn', x.r.edits + 1]]);
+    try { markIdeaInDoc_(x.s.t, true); } catch (err) { console.error('Doc withdraw note failed: ' + err); }
+    try { CacheService.getScriptCache().remove('ideas_web'); } catch (e) {}
+    return { ok: true };
+  } finally { lock.releaseLock(); }
+}
+
+/* ---- website: ?action=restore&data={code} ---- */
+function restoreIdea(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const x = editLinkAndIdea_(p.code);
+    if (x.error) return x;
+    if (String(x.s.t.status) !== WITHDRAWN) return { ok: true, already: true };
+    setStatus_(x.s.row, 'pending');
+    getEditSheet_().getRange(x.r.row, 7, 1, 3).setValues([[new Date(), 'Put back after withdrawing', x.r.edits + 1]]);
+    try { markIdeaInDoc_(x.s.t, false); } catch (err) { console.error('Doc restore note failed: ' + err); }
+    try { CacheService.getScriptCache().remove('ideas_web'); } catch (e) {}
+    return { ok: true };
+  } finally { lock.releaseLock(); }
 }

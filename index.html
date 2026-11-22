@@ -252,6 +252,7 @@
   <div class="submit-row">
     <button class="btn btn-primary" id="submit-btn" onclick="submitTrade()">Submit Trade for Review →</button>
     <button type="button" class="btn btn-ghost" id="draft-btn" onclick="saveDraft(true)">Save draft</button>
+    <button type="button" class="btn btn-ghost withdraw-btn" id="withdraw-btn" onclick="askWithdraw()" style="display:none;">Withdraw this idea</button>
     <span id="submit-status"></span>
   </div>
   <p class="draft-note" id="draft-status">Not ready yet? Your work is saved automatically on this device as you type, so you can close the page and finish later.</p>
@@ -584,12 +585,17 @@
         el.style.opacity = '.7';
         el.title = 'This stays the same. For a different stock, submit a new idea.';
       });
+      if (res.withdrawn && res.open) {
+        showWithdrawn(res.withdrawnOn);
+        return;
+      }
       if (!res.open) {
         editBanner('<strong>Editing has closed for ' + esc(editTicker) + '.</strong> It closed at ' + esc(res.deadline) +
           ', when the meeting-day email went out. You can still <a href="ideas.html" style="color:var(--amber);font-weight:600;">add a comment on the ideas page</a>.', true);
         document.getElementById('submit-btn').disabled = true;
         return;
       }
+      document.getElementById('withdraw-btn').style.display = '';
       editBanner('<strong>You\'re editing your ' + esc(editTicker) + ' idea.</strong> Change anything you like below (the symbol, company and your name stay the same), ' +
         'then press <strong>Save changes</strong> at the bottom. You can edit until ' + esc(res.deadline) + '.');
     });
@@ -617,6 +623,55 @@
         '</div>';
       panel.style.display = 'flex';
       panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 45000);
+  }
+
+  /* ── Withdraw / put back ── */
+  function lockForm(locked) {
+    document.querySelectorAll('.form-block input, .form-block select, .form-block textarea, .form-block button').forEach(function (el) {
+      el.disabled = locked;
+    });
+    document.getElementById('submit-btn').disabled = locked;
+  }
+  function showWithdrawn(onDate) {
+    lockForm(true);
+    document.getElementById('withdraw-btn').style.display = 'none';
+    editBanner('<strong>You withdrew your ' + esc(editTicker) + ' idea' + (onDate ? ' on ' + esc(onDate) : '') + '.</strong> ' +
+      'It\'s off the ideas page and out of the meeting emails. Changed your mind? ' +
+      '<button type="button" class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="putBack()">Put it back</button>');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function askWithdraw() {
+    const panel = document.getElementById('confirm-panel');
+    panel.innerHTML =
+      '<div class="confirm-body">' +
+        '<div class="confirm-title">Withdraw your ' + esc(editTicker) + ' idea?</div>' +
+        '<div class="confirm-text">It will come off the ideas page and out of the meeting emails. ' +
+        'In the meeting\'s Google Doc it will be crossed out (any comments stay for the record). ' +
+        'You can put it back until the meeting-day email goes out.</div>' +
+        '<div class="confirm-actions">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="withdraw-yes" onclick="doWithdraw()">Yes, withdraw it</button> ' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById(\'confirm-panel\').style.display=\'none\'">Keep it</button>' +
+        '</div>' +
+      '</div>';
+    panel.style.display = 'flex';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function doWithdraw() {
+    const yes = document.getElementById('withdraw-yes');
+    if (yes) { yes.disabled = true; yes.textContent = 'Withdrawing…'; }
+    clubCall('withdraw', { code: EDIT_CODE }, function (res) {
+      document.getElementById('confirm-panel').style.display = 'none';
+      if (!res || !res.ok) { showToast((res && res.error) || 'Could not withdraw. Please try again.', true); return; }
+      showWithdrawn('');
+      showToast('Withdrawn. Your ' + editTicker + ' idea is off the list.');
+    }, 45000);
+  }
+  function putBack() {
+    clubCall('restore', { code: EDIT_CODE }, function (res) {
+      if (!res || !res.ok) { showToast((res && res.error) || 'Could not put it back. Please try again.', true); return; }
+      showToast('Your ' + editTicker + ' idea is back on the list.');
+      setTimeout(function () { location.reload(); }, 900);
     }, 45000);
   }
 

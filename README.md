@@ -159,6 +159,10 @@ adds a ✏️ "updated this idea" note under the idea in the meeting doc (nothin
 Editing closes at 7 am on meeting day. Codes live in the **Edit Links** tab, never in Submissions. Backend: `getedit` / `saveedit` actions in `Brief.gs`.
 Ideas sent in before a link existed: run `sendEditLinksForThisMonth` (all) or a one-line wrapper around `sendEditLinkFor_('LRCX')` (one).
 
+**Withdraw (Nov 21, 2026):** the edit page also has **Withdraw this idea** (with a confirm box) and, once withdrawn, **Put it back**, both until 7 am meeting day.
+Withdrawn = Status `Withdrawn` in Submissions. The idea drops off the ideas page, the Friday email, the meeting-day email (its doc section and comments are left out of what the AI reads) and the decisions emails.
+In the meeting doc the heading is crossed out and a 🚫 note is added; nothing is deleted, so comments stay for the record. Backend: `withdraw` / `restore` actions, `cycleIdeas_` skips withdrawn ideas (`cycleIdeasAll_` includes them).
+
 ## Security (Nov 20, 2026 pass)
 
 The Apps Script web app is public ("Anyone"), so it guards itself:
